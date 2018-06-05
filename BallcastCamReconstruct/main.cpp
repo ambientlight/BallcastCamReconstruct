@@ -9,6 +9,8 @@
 #include <iostream>
 #include <chrono>
 #include <opencv2/opencv.hpp>
+#include <CoreGraphics/CoreGraphics.h>
+
 using namespace cv;
 using namespace std::chrono;
 
@@ -74,10 +76,10 @@ HoughLinesStandard(InputArray src,
     return _accum;
 }
 
-int main(int argc, const char * argv[]) {
+void houghTest(int argc, const char* argv[]){
     if(argc != 2){
         std::cout <<" Usage: BallcastCamReconstruct ImageToLoadAndDisplay" << std::endl;
-        return -1;
+        return;
     }
     
     Mat image = imread(argv[1], CV_LOAD_IMAGE_COLOR);
@@ -97,8 +99,40 @@ int main(int argc, const char * argv[]) {
     // Show our image inside it.
     // And wait for keystoke in the window
     // namedWindow("Display window", WINDOW_AUTOSIZE);
-    // mshow("Display window", edges);
+    // imshow("Display window", edges);
     // waitKey(0);
+}
+
+int main(int argc, const char * argv[]) {
+    //houghTest(argc, argv);
+    
+    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    CGImageRef imageRef = CGWindowListCreateImage(CGRectInfinite, kCGWindowListOptionAll, kCGNullWindowID, kCGWindowImageDefault);
+    CFDataRef rawData = CGDataProviderCopyData(CGImageGetDataProvider(imageRef));
+    uint8_t* buffer = (uint8_t*)CFDataGetBytePtr(rawData);
+    CFIndex length = CFDataGetLength(rawData);
+    
+    std::cout << length << std::endl;
+    std::cout << (int)CGImageGetHeight(imageRef) << std::endl;
+    std::cout << (int)CGImageGetWidth(imageRef) << std::endl;
+    
+    Mat image = Mat((int)CGImageGetHeight(imageRef), (int)CGImageGetWidth(imageRef), CV_8UC4, buffer);
+    CGImageRelease(imageRef);
+    
+    milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    std::cout << end_time.count() - start_time.count() << std::endl;
+    
+    // Create a window for display
+    // Show our image inside it.
+    // And wait for keystoke in the window
+    namedWindow("Display window", WINDOW_AUTOSIZE);
+    imshow("Display window", image);
+    waitKey(0);
     
     return 0;
 }
+
+
+
+
+

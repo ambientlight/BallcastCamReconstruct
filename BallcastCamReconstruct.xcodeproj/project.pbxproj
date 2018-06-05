@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A2B7FA820C6E8DF00042EFB /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B7FA720C6E8DF00042EFB /* CoreGraphics.framework */; };
+		1A2B7FAA20C6F6D500042EFB /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B7FA920C6F6D500042EFB /* CoreFoundation.framework */; };
 		1A42B73920C569BC00896F24 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A42B73820C569BC00896F24 /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +25,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1A2B7FA720C6E8DF00042EFB /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		1A2B7FA920C6F6D500042EFB /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		1A42B73520C569BC00896F24 /* BallcastCamReconstruct */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = BallcastCamReconstruct; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A42B73820C569BC00896F24 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -32,17 +36,29 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A2B7FAA20C6F6D500042EFB /* CoreFoundation.framework in Frameworks */,
+				1A2B7FA820C6E8DF00042EFB /* CoreGraphics.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1A2B7FA620C6E8DF00042EFB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B7FA920C6F6D500042EFB /* CoreFoundation.framework */,
+				1A2B7FA720C6E8DF00042EFB /* CoreGraphics.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		1A42B72C20C569BB00896F24 = {
 			isa = PBXGroup;
 			children = (
 				1A42B73720C569BC00896F24 /* BallcastCamReconstruct */,
 				1A42B73620C569BC00896F24 /* Products */,
+				1A2B7FA620C6E8DF00042EFB /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
