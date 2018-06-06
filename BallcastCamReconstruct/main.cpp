@@ -10,9 +10,17 @@
 #include <chrono>
 #include <opencv2/opencv.hpp>
 #include <CoreGraphics/CoreGraphics.h>
+#include "ScreenCaptureSourceWrapper.h"
 
 using namespace cv;
 using namespace std::chrono;
+
+typedef void* CGAccessSessionRef;
+
+//CGAccessSessionRef CGAccessSessionCreate(CGDataProviderRef provider);
+//void *CGAccessSessionGetBytePointer(CGAccessSessionRef session);
+//size_t CGAccessSessionGetBytes(CGAccessSessionRef session,void *buffer,size_t bytes);
+//void CGAccessSessionRelease(CGAccessSessionRef session);
 
 static void
 createTrigTable( int numangle, double min_theta, double theta_step,
@@ -103,16 +111,15 @@ void houghTest(int argc, const char* argv[]){
     // waitKey(0);
 }
 
-int main(int argc, const char * argv[]) {
-    //houghTest(argc, argv);
-    
+void screenshotAndDisplayInOpenCV() {
     milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     CGImageRef imageRef = CGWindowListCreateImage(CGRectInfinite, kCGWindowListOptionAll, kCGNullWindowID, kCGWindowImageDefault);
     CFDataRef rawData = CGDataProviderCopyData(CGImageGetDataProvider(imageRef));
     uint8_t* buffer = (uint8_t*)CFDataGetBytePtr(rawData);
-    CFIndex length = CFDataGetLength(rawData);
     
-    std::cout << length << std::endl;
+    // CGAccessSessionRef imageDataSession = CGAccessSessionCreate(CGImageGetDataProvider(imageRef));
+    // uint8_t* buffer = (uint8_t*)CGAccessSessionGetBytePointer(imageDataSession);
+    
     std::cout << (int)CGImageGetHeight(imageRef) << std::endl;
     std::cout << (int)CGImageGetWidth(imageRef) << std::endl;
     
@@ -128,6 +135,14 @@ int main(int argc, const char * argv[]) {
     namedWindow("Display window", WINDOW_AUTOSIZE);
     imshow("Display window", image);
     waitKey(0);
+}
+
+int main(int argc, const char * argv[]) {
+    //houghTest(argc, argv);
+    
+    ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
+    source.init();
+    source.doSomethingWithMyClass();
     
     return 0;
 }
