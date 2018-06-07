@@ -14,11 +14,8 @@
 #import "ScreenCaptureSource-C-Interface.h"
 
 @interface ScreenCaptureSource:  NSObject<AVCaptureVideoDataOutputSampleBufferDelegate> {
-    int someVar;
+    
 }
-
-- (int)doSomethingWith:(void*) aParameter;
-- (void)logMyMessage:(char*) aCStr;
 
 @end
 

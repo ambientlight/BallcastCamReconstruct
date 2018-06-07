@@ -17,7 +17,6 @@ public:
     ~ScreenCaptureSourceWrapper(void);
     
     void init(void);
-    void doSomethingWithMyClass(void);
 
 private:
     ScreenCaptureSourceImpl* _impl;

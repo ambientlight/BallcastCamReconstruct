@@ -17,11 +17,6 @@ using namespace std::chrono;
 
 typedef void* CGAccessSessionRef;
 
-//CGAccessSessionRef CGAccessSessionCreate(CGDataProviderRef provider);
-//void *CGAccessSessionGetBytePointer(CGAccessSessionRef session);
-//size_t CGAccessSessionGetBytes(CGAccessSessionRef session,void *buffer,size_t bytes);
-//void CGAccessSessionRelease(CGAccessSessionRef session);
-
 static void
 createTrigTable( int numangle, double min_theta, double theta_step,
                 float irho, float *tabSin, float *tabCos )
@@ -142,9 +137,8 @@ int main(int argc, const char * argv[]) {
     
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     source.init();
-    source.doSomethingWithMyClass();
     
-    return 0;
+    sleep(10);
 }
 
 

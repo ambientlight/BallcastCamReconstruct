@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		1A2B7FA820C6E8DF00042EFB /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B7FA720C6E8DF00042EFB /* CoreGraphics.framework */; };
 		1A2B7FAA20C6F6D500042EFB /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2B7FA920C6F6D500042EFB /* CoreFoundation.framework */; };
+		1A2D883520C97A060084740E /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2D883420C97A060084740E /* CoreVideo.framework */; };
+		1A2D883720C97D240084740E /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A2D883620C97D230084740E /* CoreMedia.framework */; };
 		1A425E4B20C8457F007E5778 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A425E4A20C8457F007E5778 /* AVFoundation.framework */; };
 		1A425E4D20C846BE007E5778 /* ScreenCaptureSource.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1A425E4C20C846BE007E5778 /* ScreenCaptureSource.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A425E5120C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp */; };
@@ -30,6 +32,8 @@
 /* Begin PBXFileReference section */
 		1A2B7FA720C6E8DF00042EFB /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		1A2B7FA920C6F6D500042EFB /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		1A2D883420C97A060084740E /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		1A2D883620C97D230084740E /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		1A425E4A20C8457F007E5778 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		1A425E4C20C846BE007E5778 /* ScreenCaptureSource.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ScreenCaptureSource.mm; sourceTree = "<group>"; };
 		1A425E4E20C847E4007E5778 /* ScreenCaptureSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScreenCaptureSource.h; sourceTree = "<group>"; };
@@ -45,6 +49,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A2D883720C97D240084740E /* CoreMedia.framework in Frameworks */,
+				1A2D883520C97A060084740E /* CoreVideo.framework in Frameworks */,
 				1A425E4B20C8457F007E5778 /* AVFoundation.framework in Frameworks */,
 				1A2B7FAA20C6F6D500042EFB /* CoreFoundation.framework in Frameworks */,
 				1A2B7FA820C6E8DF00042EFB /* CoreGraphics.framework in Frameworks */,
@@ -57,6 +63,8 @@
 		1A2B7FA620C6E8DF00042EFB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1A2D883620C97D230084740E /* CoreMedia.framework */,
+				1A2D883420C97A060084740E /* CoreVideo.framework */,
 				1A425E4A20C8457F007E5778 /* AVFoundation.framework */,
 				1A2B7FA920C6F6D500042EFB /* CoreFoundation.framework */,
 				1A2B7FA720C6E8DF00042EFB /* CoreGraphics.framework */,

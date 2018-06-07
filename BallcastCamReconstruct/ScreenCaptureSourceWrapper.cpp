@@ -23,7 +23,3 @@ ScreenCaptureSourceWrapper::~ScreenCaptureSourceWrapper(){
     }
 }
 
-void ScreenCaptureSourceWrapper::doSomethingWithMyClass(void){
-    _impl->logMyMessage((char*)"Hi from C++");
-}
-

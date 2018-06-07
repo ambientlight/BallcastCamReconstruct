@@ -15,8 +15,6 @@ public:
     ~ScreenCaptureSourceImpl(void);
     
     void init(void);
-    int  doSomethingWith(void* aParameter );
-    void logMyMessage(char* aCStr );
 
 private:
     void* self;
