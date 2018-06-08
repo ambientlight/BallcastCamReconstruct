@@ -11,6 +11,7 @@
 #include <opencv2/opencv.hpp>
 #include <CoreGraphics/CoreGraphics.h>
 #include "ScreenCaptureSourceWrapper.h"
+#include "Semaphore.h"
 
 using namespace cv;
 using namespace std::chrono;
@@ -135,10 +136,39 @@ void screenshotAndDisplayInOpenCV() {
 int main(int argc, const char * argv[]) {
     //houghTest(argc, argv);
     
+    namedWindow("Display window", WINDOW_NORMAL);
+
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
-    source.init();
+    Semaphore* semaphor = new Semaphore();
+    source.init(semaphor);
+    while(source.isEnabled()){
+        semaphor->wait();
+        
+        CVImageBufferRef imageBuffer = source.lastFrameBuffer();
+        CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+        
+        size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
+        unsigned char* buffer = static_cast<unsigned char*>(CVPixelBufferGetBaseAddress(imageBuffer));
+        
+        CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
+        
+        Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
+        Mat smallerImage;
+        resize(image, smallerImage, cv::Size(), 0.25, 0.25, INTER_CUBIC);
+        
+        std::cout << bufferSize.width << ", " << bufferSize.height << std::endl;
+        //std::cout << image << std::endl;
+        
+        imshow("Display window", smallerImage);
+        char c=(char)waitKey(25);
+        if(c==27)
+            break;
+        
+        CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+        CVPixelBufferRelease(imageBuffer);
+    }
     
-    sleep(10);
+    delete semaphor;
 }
 
 

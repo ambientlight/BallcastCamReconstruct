@@ -6,6 +6,9 @@
 //  Copyright © 2018 Ballcast. All rights reserved.
 //
 
+#import "Semaphore.h"
+#import <CoreVideo/CoreVideo.h>
+
 #ifndef ScreenCaptureSourceWrapper_h
 #define ScreenCaptureSourceWrapper_h
 
@@ -16,7 +19,9 @@ public:
     ScreenCaptureSourceWrapper(void);
     ~ScreenCaptureSourceWrapper(void);
     
-    void init(void);
+    void init(Semaphore*);
+    bool isEnabled() const;
+    CVImageBufferRef lastFrameBuffer() const;
 
 private:
     ScreenCaptureSourceImpl* _impl;
