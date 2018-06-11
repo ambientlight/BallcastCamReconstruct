@@ -15,6 +15,7 @@
 		1A425E4D20C846BE007E5778 /* ScreenCaptureSource.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1A425E4C20C846BE007E5778 /* ScreenCaptureSource.mm */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A425E5120C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp */; };
 		1A42B73920C569BC00896F24 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A42B73820C569BC00896F24 /* main.cpp */; };
+		1A7C30FF20CEDFED0098474B /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A7C30FE20CEDFED0098474B /* AppKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -43,6 +44,8 @@
 		1A425E5120C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ScreenCaptureSourceWrapper.cpp; sourceTree = "<group>"; };
 		1A42B73520C569BC00896F24 /* BallcastCamReconstruct */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = BallcastCamReconstruct; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A42B73820C569BC00896F24 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1A7C30FE20CEDFED0098474B /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		1A7C310020CEE18E0098474B /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A7C30FF20CEDFED0098474B /* AppKit.framework in Frameworks */,
 				1A2D883720C97D240084740E /* CoreMedia.framework in Frameworks */,
 				1A2D883520C97A060084740E /* CoreVideo.framework in Frameworks */,
 				1A425E4B20C8457F007E5778 /* AVFoundation.framework in Frameworks */,
@@ -64,6 +68,8 @@
 		1A2B7FA620C6E8DF00042EFB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1A7C310020CEE18E0098474B /* IOKit.framework */,
+				1A7C30FE20CEDFED0098474B /* AppKit.framework */,
 				1A2D883620C97D230084740E /* CoreMedia.framework */,
 				1A2D883420C97A060084740E /* CoreVideo.framework */,
 				1A425E4A20C8457F007E5778 /* AVFoundation.framework */,

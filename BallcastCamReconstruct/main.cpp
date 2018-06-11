@@ -136,7 +136,7 @@ void screenshotAndDisplayInOpenCV() {
 int main(int argc, const char * argv[]) {
     //houghTest(argc, argv);
     
-    namedWindow("Display window", WINDOW_NORMAL);
+    namedWindow("Screen capture", WINDOW_NORMAL);
 
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore();
@@ -144,24 +144,24 @@ int main(int argc, const char * argv[]) {
     while(source.isEnabled()){
         semaphor->wait();
         
+        //milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        
         CVImageBufferRef imageBuffer = source.lastFrameBuffer();
         CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
         
-        size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
         unsigned char* buffer = static_cast<unsigned char*>(CVPixelBufferGetBaseAddress(imageBuffer));
-        
         CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
-        
         Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
+        
         Mat smallerImage;
-        resize(image, smallerImage, cv::Size(), 0.25, 0.25, INTER_CUBIC);
+        resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
         
-        std::cout << bufferSize.width << ", " << bufferSize.height << std::endl;
-        //std::cout << image << std::endl;
+        //milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        //std::cout << end_time.count() - start_time.count() << std::endl;
         
-        imshow("Display window", smallerImage);
-        char c=(char)waitKey(25);
-        if(c==27)
+        imshow("Screen capture", smallerImage);
+        char c = (char)waitKey(25);
+        if(c == 27)
             break;
         
         CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);

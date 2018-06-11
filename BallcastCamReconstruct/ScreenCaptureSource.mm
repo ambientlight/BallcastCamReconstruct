@@ -12,6 +12,7 @@
 
 #import "ScreenCaptureSource.h"
 #import <CoreMedia/CoreMedia.h>
+#import <AppKit/AppKit.h>
 
 using namespace cv;
 using namespace std::chrono;
@@ -56,7 +57,23 @@ CVImageBufferRef ScreenCaptureSourceImpl::lastFrameBuffer() const {
         self.semaphore = semaphore;
         self.complete = false;
         self.captureSession = [AVCaptureSession new];
-        self.input = [AVCaptureScreenInput new];
+        
+        NSArray<NSScreen *>* screens = [NSScreen screens];
+        NSScreen* targetScreen = [NSScreen mainScreen];
+        if(screens.count > 1){
+            NSLog(@"Multiple screens available, selecting first non-main one");
+            for (NSScreen* screen in screens) {
+                if([screen isEqual:[NSScreen mainScreen]]){
+                    continue;
+                }
+                
+                targetScreen = screen;
+                break;
+            }
+        }
+        
+        CGDirectDisplayID displayId = [[targetScreen.deviceDescription valueForKey:@"NSScreenNumber"] intValue];
+        self.input = [[AVCaptureScreenInput alloc] initWithDisplayID:displayId];
         [self.captureSession addInput:self.input];
         
         self.output = [AVCaptureVideoDataOutput new];
