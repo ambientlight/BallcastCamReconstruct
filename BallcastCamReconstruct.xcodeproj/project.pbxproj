@@ -16,6 +16,8 @@
 		1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A425E5120C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp */; };
 		1A42B73920C569BC00896F24 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A42B73820C569BC00896F24 /* main.cpp */; };
 		1A7C30FF20CEDFED0098474B /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A7C30FE20CEDFED0098474B /* AppKit.framework */; };
+		1AE8757220D0162A00155F1E /* ImageFilters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AE8757020D0162A00155F1E /* ImageFilters.cpp */; };
+		1AE8757520D01BD800155F1E /* opecvUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AE8757320D01BD800155F1E /* opecvUtils.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -46,6 +48,10 @@
 		1A42B73820C569BC00896F24 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		1A7C30FE20CEDFED0098474B /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		1A7C310020CEE18E0098474B /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		1AE8757020D0162A00155F1E /* ImageFilters.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImageFilters.cpp; sourceTree = "<group>"; };
+		1AE8757120D0162A00155F1E /* ImageFilters.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ImageFilters.hpp; sourceTree = "<group>"; };
+		1AE8757320D01BD800155F1E /* opecvUtils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = opecvUtils.cpp; sourceTree = "<group>"; };
+		1AE8757420D01BD800155F1E /* opecvUtils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = opecvUtils.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +106,10 @@
 			isa = PBXGroup;
 			children = (
 				1A42B73820C569BC00896F24 /* main.cpp */,
+				1AE8757320D01BD800155F1E /* opecvUtils.cpp */,
+				1AE8757420D01BD800155F1E /* opecvUtils.hpp */,
+				1AE8757020D0162A00155F1E /* ImageFilters.cpp */,
+				1AE8757120D0162A00155F1E /* ImageFilters.hpp */,
 				1A2D883920C999A30084740E /* Semaphore.h */,
 				1A425E4C20C846BE007E5778 /* ScreenCaptureSource.mm */,
 				1A425E4E20C847E4007E5778 /* ScreenCaptureSource.h */,
@@ -168,6 +178,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A425E4D20C846BE007E5778 /* ScreenCaptureSource.mm in Sources */,
+				1AE8757220D0162A00155F1E /* ImageFilters.cpp in Sources */,
+				1AE8757520D01BD800155F1E /* opecvUtils.cpp in Sources */,
 				1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */,
 				1A42B73920C569BC00896F24 /* main.cpp in Sources */,
 			);

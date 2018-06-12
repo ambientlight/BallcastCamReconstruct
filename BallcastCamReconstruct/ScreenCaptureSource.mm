@@ -140,7 +140,6 @@ static bool once = false;
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
     
-    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     CVPixelBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     CVPixelBufferRetain(imageBuffer);
     self.lastFrameBuffer = imageBuffer;

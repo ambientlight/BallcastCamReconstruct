@@ -10,8 +10,11 @@
 #include <chrono>
 #include <opencv2/opencv.hpp>
 #include <CoreGraphics/CoreGraphics.h>
+
 #include "ScreenCaptureSourceWrapper.h"
 #include "Semaphore.h"
+#include "opecvUtils.hpp"
+#include "ImageFilters.hpp"
 
 using namespace cv;
 using namespace std::chrono;
@@ -80,13 +83,7 @@ HoughLinesStandard(InputArray src,
     return _accum;
 }
 
-void houghTest(int argc, const char* argv[]){
-    if(argc != 2){
-        std::cout <<" Usage: BallcastCamReconstruct ImageToLoadAndDisplay" << std::endl;
-        return;
-    }
-    
-    Mat image = imread(argv[1], CV_LOAD_IMAGE_COLOR);
+void houghTest(Mat image){
     std::cout << image.size() << ", channels: " << image.channels() << std::endl;
     
     Mat edges;
@@ -144,7 +141,7 @@ int main(int argc, const char * argv[]) {
     while(source.isEnabled()){
         semaphor->wait();
         
-        //milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         
         CVImageBufferRef imageBuffer = source.lastFrameBuffer();
         CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
@@ -152,14 +149,19 @@ int main(int argc, const char * argv[]) {
         unsigned char* buffer = static_cast<unsigned char*>(CVPixelBufferGetBaseAddress(imageBuffer));
         CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
         Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
+
+        Scalar lowerBound = Scalar(35, 30, 30, 0);
+        Scalar upperBound = Scalar(60, 210, 170, 1);
+        //Scalar lowerBound = Scalar(uint8(60 * 255/360), uint8(0.20 * 255), uint8(0.2 * 255));
+        //Scalar upperBound = Scalar(uint8(120 * 255/360), uint8(0.80 * 255), uint8(0.75 * 255));
         
-        Mat smallerImage;
-        resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+        //Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+        Mat lineMask; filteredLineMask(image, lineMask, lowerBound, upperBound, 20);
         
-        //milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        //std::cout << end_time.count() - start_time.count() << std::endl;
+        milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        std::cout << end_time.count() - start_time.count() << std::endl;
         
-        imshow("Screen capture", smallerImage);
+        imshow("Screen capture", lineMask);
         char c = (char)waitKey(25);
         if(c == 27)
             break;
