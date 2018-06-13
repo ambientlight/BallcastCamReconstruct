@@ -155,9 +155,9 @@ int main(int argc, const char * argv[]) {
         //Scalar lowerBound = Scalar(uint8(60 * 255/360), uint8(0.20 * 255), uint8(0.2 * 255));
         //Scalar upperBound = Scalar(uint8(120 * 255/360), uint8(0.80 * 255), uint8(0.75 * 255));
         
-        //Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
-        Mat lineMask; filteredLineMask(image, lineMask, lowerBound, upperBound, 20);
-        
+        Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+        Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 20);
+
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         std::cout << end_time.count() - start_time.count() << std::endl;
         
