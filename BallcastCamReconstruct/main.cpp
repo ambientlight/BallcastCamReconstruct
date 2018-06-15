@@ -138,6 +138,12 @@ int main(int argc, const char * argv[]) {
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore();
     source.init(semaphor);
+    
+    Scalar lowerBound = Scalar(35, 30, 30, 0);
+    Scalar upperBound = Scalar(55, 210, 140, 1);
+    std::cout << "(" << lowerBound[0] * 360/255 << "," << lowerBound[1] / 255 << "," << lowerBound[2] / 255 << ")" << std::endl;
+    std::cout << "(" << upperBound[0] * 360/255 << "," << upperBound[1] / 255 << "," << upperBound[2] / 255 << ")" << std::endl;
+    
     while(source.isEnabled()){
         semaphor->wait();
         
@@ -150,16 +156,14 @@ int main(int argc, const char * argv[]) {
         CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
         Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
 
-        Scalar lowerBound = Scalar(35, 30, 30, 0);
-        Scalar upperBound = Scalar(60, 210, 170, 1);
         //Scalar lowerBound = Scalar(uint8(60 * 255/360), uint8(0.20 * 255), uint8(0.2 * 255));
         //Scalar upperBound = Scalar(uint8(120 * 255/360), uint8(0.80 * 255), uint8(0.75 * 255));
         
-        Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+        Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.75, 0.75, INTER_CUBIC);
         Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 20);
 
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        std::cout << end_time.count() - start_time.count() << std::endl;
+        //std::cout << end_time.count() - start_time.count() << std::endl;
         
         imshow("Screen capture", lineMask);
         char c = (char)waitKey(25);

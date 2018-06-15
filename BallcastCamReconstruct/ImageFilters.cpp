@@ -46,33 +46,32 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
     
     Mat grassMask; inRange(hsvImage, lowerGreen, higherGreen, grassMask);
     Mat nonGrassMask; bitwise_not(grassMask, nonGrassMask);
-    
+
     Mat grassOnlyFrameImage; bitwise_and(image, image, grassOnlyFrameImage, grassMask);
-    
+
     //TODO: Line search space should bitwise_and with line_seach_mask
     Mat lineSearchSpace = image;
-    
+
     Mat blueComponent; extractChannel(lineSearchSpace, blueComponent, 2);
     int halfLineWidth = round(lineWidth / 2);
-    std::cout << blueComponent.size << std::endl;
     blueComponent.forEach<uint8_t>([&](uint8_t& b, const int* position) -> void {
         int rowIndex = position[0];
         int columnIndex = position[1];
         bool skipRows = false;
         bool skipCols = false;
-        
-        if(rowIndex < halfLineWidth || rowIndex > blueComponent.rows - halfLineWidth){ skipRows = true; }
+
+        if(rowIndex <= halfLineWidth || rowIndex >= blueComponent.rows - halfLineWidth){ skipRows = true; }
         if(!skipRows &&(  grassMask.at<uint8_t>(rowIndex - halfLineWidth, columnIndex) == 0
            || grassMask.at<uint8_t>(rowIndex + halfLineWidth, columnIndex) == 0)){
             skipRows = true;
         }
-        
-        if(columnIndex < halfLineWidth || columnIndex > blueComponent.cols - halfLineWidth){ skipCols = true; }
+
+        if(columnIndex <= halfLineWidth || columnIndex >= blueComponent.cols - halfLineWidth){ skipCols = true; }
         if(!skipCols && (grassMask.at<uint8_t>(rowIndex, columnIndex - halfLineWidth) == 0
            || grassMask.at<uint8_t>(rowIndex, columnIndex + halfLineWidth) == 0)){
             skipCols = true;
         }
-        
+
         if(!skipRows && !skipCols){
             uint8_t a = blueComponent.at<uint8_t>(rowIndex - halfLineWidth, columnIndex);
             uint8_t c = blueComponent.at<uint8_t>(rowIndex + halfLineWidth, columnIndex);
@@ -91,7 +90,7 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
             b = 0;
         }
     });
-    
+
     // turn into a mask
     Mat target; bitwise_and(blueComponent, blueComponent, target, nonGrassMask);
     Mat targetMask; inRange(target, Scalar(1), Scalar(255), targetMask);
