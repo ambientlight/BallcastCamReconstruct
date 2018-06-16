@@ -48,7 +48,8 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
     Mat nonGrassMask; bitwise_not(grassMask, nonGrassMask);
 
     Mat grassOnlyFrameImage; bitwise_and(image, image, grassOnlyFrameImage, grassMask);
-
+    output = grassOnlyFrameImage;
+    
     //TODO: Line search space should bitwise_and with line_seach_mask
     Mat lineSearchSpace = image;
 
