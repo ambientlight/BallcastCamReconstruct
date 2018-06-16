@@ -133,7 +133,8 @@ void screenshotAndDisplayInOpenCV() {
 int main(int argc, const char * argv[]) {
     //houghTest(argc, argv);
     
-    namedWindow("Screen capture", WINDOW_NORMAL);
+    namedWindow("Line Mask", WINDOW_NORMAL);
+    namedWindow("Detected Lines", WINDOW_NORMAL);
 
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore();
@@ -153,14 +154,21 @@ int main(int argc, const char * argv[]) {
         CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
         Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
 
-        Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+        Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.38, 0.38, INTER_CUBIC);
         Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 20);
-        //Mat lineMask; Canny(smallerImage, lineMask, 50, 200);
+        
+        std::vector<Vec4f> houghLines; HoughLinesP(lineMask, houghLines, 1, M_PI/180, 100, 50, 20);
+        for (const Vec4f& detectedLine: houghLines){
+            line(smallerImage,
+                 cv::Point(detectedLine[0], detectedLine[1]),
+                 cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 0, 0), 2);
+        }
         
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        //std::cout << end_time.count() - start_time.count() << std::endl;
+        std::cout << end_time.count() - start_time.count() << std::endl;
         
-        imshow("Screen capture", lineMask);
+        imshow("Line Mask", lineMask);
+        imshow("Detected Lines", smallerImage);
         char c = (char)waitKey(25);
         if(c == 27)
             break;
