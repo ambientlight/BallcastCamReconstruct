@@ -54,7 +54,7 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
     Mat lineSearchSpace = image;
 
     Mat blueComponent; extractChannel(lineSearchSpace, blueComponent, 0);
-    int halfLineWidth = round(lineWidth / 2);
+    int halfLineWidth = (int)lineWidth / 2;
     
     blueComponent.forEach<uint8_t>([&](uint8_t& b, const int* position) -> void {
         int rowIndex = position[0];

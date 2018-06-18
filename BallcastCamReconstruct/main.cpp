@@ -132,8 +132,8 @@ void screenshotAndDisplayInOpenCV() {
 */
 
 void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
-    Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.38, 0.38, INTER_CUBIC);
-    Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 10);
+    Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+    Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 14);
     
     Mat ellipseDetectInput; cvtColor(smallerImage, ellipseDetectInput, CV_BGRA2GRAY);
     Size sz = smallerImage.size();
