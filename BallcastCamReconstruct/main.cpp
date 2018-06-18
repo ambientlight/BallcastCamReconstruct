@@ -8,13 +8,12 @@
 
 #include <iostream>
 #include <chrono>
-#include <opencv2/opencv.hpp>
-#include <CoreGraphics/CoreGraphics.h>
-
 #include "ScreenCaptureSourceWrapper.h"
+
 #include "Semaphore.h"
 #include "opecvUtils.hpp"
 #include "ImageFilters.hpp"
+#include "EllipseDetectorYaed.h"
 
 using namespace cv;
 using namespace std::chrono;
@@ -104,6 +103,7 @@ void houghTest(Mat image){
     // waitKey(0);
 }
 
+/*
 void screenshotAndDisplayInOpenCV() {
     milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     CGImageRef imageRef = CGWindowListCreateImage(CGRectInfinite, kCGWindowListOptionAll, kCGNullWindowID, kCGWindowImageDefault);
@@ -129,14 +129,49 @@ void screenshotAndDisplayInOpenCV() {
     imshow("Display window", image);
     waitKey(0);
 }
+*/
 
 void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
     Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.38, 0.38, INTER_CUBIC);
     Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 10);
     
-    Mat kernel = getStructuringElement(MORPH_RECT, cv::Size(4, 4));
-    //morphologyEx(lineMask, lineMask, cv::MORPH_CLOSE, kernel);
-    dilate(lineMask, lineMask, kernel);
+    Mat ellipseDetectInput; cvtColor(smallerImage, ellipseDetectInput, CV_BGRA2GRAY);
+    Size sz = smallerImage.size();
+    
+    // Parameters Settings (Sect. 4.2)
+    int    iThLength = 16;
+    float  fThObb = 3.0f;
+    float  fThPos = 1.0f;
+    float  fTaoCenters = 0.05f;
+    int    iNs = 16;
+    float  fMaxCenterDistance = sqrt(float(sz.width*sz.width + sz.height*sz.height)) * fTaoCenters;
+    float  fThScoreScore = 0.7f;
+    // Gaussian filter parameters, in pre-processing
+    Size   szPreProcessingGaussKernelSize = Size(5, 5);
+    double dPreProcessingGaussSigma = 1.0;
+    
+    float  fDistanceToEllipseContour = 0.1f;    // (Sect. 3.3.1 - Validation)
+    float  fMinReliability = 0.5;    // Const parameters to discard bad ellipses
+    
+    CEllipseDetectorYaed yaed;
+    yaed.SetParameters(szPreProcessingGaussKernelSize,
+                       dPreProcessingGaussSigma,
+                       fThPos,
+                       fMaxCenterDistance,
+                       iThLength,
+                       fThObb,
+                       fDistanceToEllipseContour,
+                       fThScoreScore,
+                       fMinReliability,
+                       iNs);
+    
+    vector<Ellipse> detectedEllipses;
+    yaed.Detect(ellipseDetectInput, detectedEllipses);
+    yaed.DrawDetectedEllipses((Mat3b&)smallerImage, detectedEllipses, 1);
+    
+    //Mat kernel = getStructuringElement(MORPH_RECT, cv::Size(2, 2));
+    //dilate(lineMask, lineMask, kernel);
+    /*
     std::vector<std::vector<cv::Point>> contours;
     std::vector<Vec4i> hierarchy;
     findContours(lineMask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
@@ -151,14 +186,15 @@ void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar 
         //}
         //std::cout << "Contour(" << i << "): " << contourArea(contours[i], false) << std::endl;
     }
+    */
     
-    /*
-    std::vector<Vec4f> houghLines; HoughLinesP(lineMask, houghLines, 1, M_PI/180, 50, 50, 5);
+    std::vector<Vec4f> houghLines; HoughLinesP(lineMask, houghLines, 1, M_PI/180,
+                                               100, 50, 10);
     for (const Vec4f& detectedLine: houghLines){
         line(smallerImage,
              cv::Point(detectedLine[0], detectedLine[1]),
              cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 0, 0), 2);
-    }*/
+    }
     
     mask = lineMask;
     output = smallerImage;
@@ -174,13 +210,11 @@ void performTransformFromScreenCapture(Scalar lowerBound, Scalar upperBound){
         
         milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         
-        CVImageBufferRef imageBuffer = source.lastFrameBuffer();
-        CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+        void* imageBuffer = source.lastFrameBuffer();
+        source.lockBaseAddress(imageBuffer);
         
-        unsigned char* buffer = static_cast<unsigned char*>(CVPixelBufferGetBaseAddress(imageBuffer));
-        CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
-        Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
-        
+        unsigned char* buffer = source.getBaseAddress(imageBuffer);
+        Mat image = Mat((int)source.bufferHeight(imageBuffer), (int)source.bufferWidth(imageBuffer), CV_8UC4, buffer);
         Mat lineMask; Mat smallerImage; coreTransform(image, lineMask, smallerImage, lowerBound, upperBound);
         
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -192,8 +226,7 @@ void performTransformFromScreenCapture(Scalar lowerBound, Scalar upperBound){
         if(c == 27)
             break;
         
-        CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
-        CVPixelBufferRelease(imageBuffer);
+        source.unlockAndRelease(imageBuffer);
     }
     
     delete semaphor;

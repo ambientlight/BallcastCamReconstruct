@@ -7,7 +7,6 @@
 //
 
 #import "Semaphore.h"
-#import <CoreVideo/CoreVideo.h>
 
 #ifndef ScreenCaptureSourceWrapper_h
 #define ScreenCaptureSourceWrapper_h
@@ -21,8 +20,14 @@ public:
     
     void init(Semaphore*);
     bool isEnabled() const;
-    CVImageBufferRef lastFrameBuffer() const;
+    void* lastFrameBuffer() const;
 
+    void lockBaseAddress(void* imageBuffer) const;
+    unsigned char* getBaseAddress(void* imageBuffer) const;
+    float bufferHeight(void* imageBuffer) const;
+    float bufferWidth(void* imageBuffer) const;
+    void unlockAndRelease(void* imageBuffer) const;
+    
 private:
     ScreenCaptureSourceImpl* _impl;
 };

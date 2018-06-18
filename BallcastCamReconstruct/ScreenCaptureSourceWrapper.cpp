@@ -10,6 +10,8 @@
 #include "ScreenCaptureSource-C-Interface.h"
 #include <iostream>
 
+#include <CoreVideo/CoreVideo.h>
+
 ScreenCaptureSourceWrapper::ScreenCaptureSourceWrapper(void): _impl(nullptr){}
 
 void ScreenCaptureSourceWrapper::init(Semaphore* semaphore){
@@ -27,7 +29,27 @@ bool ScreenCaptureSourceWrapper::isEnabled() const {
     return _impl != nullptr ? !_impl->isEnabled() : true;
 }
 
-CVImageBufferRef ScreenCaptureSourceWrapper::lastFrameBuffer() const {
+void* ScreenCaptureSourceWrapper::lastFrameBuffer() const {
     return _impl != nullptr ? _impl->lastFrameBuffer() : nullptr;
 }
 
+void ScreenCaptureSourceWrapper::lockBaseAddress(void* imageBuffer) const {
+    CVPixelBufferLockBaseAddress((CVPixelBufferRef)imageBuffer, kCVPixelBufferLock_ReadOnly);
+}
+
+void ScreenCaptureSourceWrapper::unlockAndRelease(void* imageBuffer) const {
+    CVPixelBufferUnlockBaseAddress((CVPixelBufferRef)imageBuffer, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferRelease((CVPixelBufferRef)imageBuffer);
+}
+
+unsigned char* ScreenCaptureSourceWrapper::getBaseAddress(void* imageBuffer) const {
+    return static_cast<unsigned char*>(CVPixelBufferGetBaseAddress((CVPixelBufferRef)imageBuffer));
+}
+
+float ScreenCaptureSourceWrapper::bufferHeight(void* imageBuffer) const {
+    return CVImageBufferGetEncodedSize((CVPixelBufferRef)imageBuffer).height;
+}
+
+float ScreenCaptureSourceWrapper::bufferWidth(void* imageBuffer) const {
+    return CVImageBufferGetEncodedSize((CVPixelBufferRef)imageBuffer).width;
+}

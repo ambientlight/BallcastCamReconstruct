@@ -8,14 +8,9 @@
 
 #include <thread>
 #include <chrono>
-#include <opencv2/opencv.hpp>
-
 #import "ScreenCaptureSource.h"
 #import <CoreMedia/CoreMedia.h>
 #import <AppKit/AppKit.h>
-
-using namespace cv;
-using namespace std::chrono;
 
 @interface ScreenCaptureSource()
 
@@ -134,8 +129,6 @@ CVImageBufferRef ScreenCaptureSourceImpl::lastFrameBuffer() const {
 
 @end
 
-static bool once = false;
-
 @implementation ScreenCaptureSource(AVCaptureVideoDataOutputSampleBufferDelegate)
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
@@ -144,29 +137,6 @@ static bool once = false;
     CVPixelBufferRetain(imageBuffer);
     self.lastFrameBuffer = imageBuffer;
     self.semaphore->notify();
-    
-    //[self stop];
-    /*
-    CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
-    size_t size = CVPixelBufferGetDataSize(imageBuffer);
-    CGSize bufferSize = CVImageBufferGetEncodedSize(imageBuffer);
-    
-    //std::cout << size << std::endl;
-    //std::cout << (int)bufferSize.height * (int)bufferSize.width * 4 << std::endl;
-    unsigned char* buffer = static_cast<unsigned char*>(CVPixelBufferGetBaseAddress(imageBuffer));
-    //unsigned char* targetBuffer = (unsigned char*)malloc(size);
-    //memcpy(targetBuffer, buffer, size);
-    
-    Mat image = Mat((int)bufferSize.height, (int)bufferSize.width, CV_8UC4, buffer);
-    //std::cout << image << std::endl;
-    //std::cout << bufferSize.width << ", " << bufferSize.height << std::endl;
-    
-    CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
-    CVPixelBufferRelease(imageBuffer);
-    
-    milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    std::cout << end_time.count() - start_time.count() << std::endl;
-    */
 }
 
 @end

@@ -93,7 +93,7 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
             b = 0;
         }
         
-        b = b > 70 ? b : 0;
+        b = b > 50 ? b : 0;
     });
     
     
