@@ -133,7 +133,18 @@ void screenshotAndDisplayInOpenCV() {
 
 void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
     Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+    
+    
+    //GaussianBlur(smallerImage, smallerImage, Size(3, 3), 0);
+    Mat kern = (Mat_<char>(3, 3) <<
+                -1, -1, -1,
+                -1, 9, -1,
+                -1, -1, -1);
+    filter2D(smallerImage, smallerImage, smallerImage.depth(), kern);
+    
+    
     Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 14);
+    
     
     Mat ellipseDetectInput; cvtColor(smallerImage, ellipseDetectInput, CV_BGRA2GRAY);
     Size sz = smallerImage.size();
