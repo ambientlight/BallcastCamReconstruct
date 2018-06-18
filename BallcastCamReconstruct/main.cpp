@@ -134,23 +134,31 @@ void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar 
     Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.38, 0.38, INTER_CUBIC);
     Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 10);
     
-    /*
+    Mat kernel = getStructuringElement(MORPH_RECT, cv::Size(4, 4));
+    //morphologyEx(lineMask, lineMask, cv::MORPH_CLOSE, kernel);
+    dilate(lineMask, lineMask, kernel);
     std::vector<std::vector<cv::Point>> contours;
     std::vector<Vec4i> hierarchy;
     findContours(lineMask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-    for (int i = 0; i< contours.size(); i++){
-        drawContours(smallerImage, contours,
-                     i, Scalar(255, 0, 0),
-                     1, LINE_8,
-                    hierarchy, 0, cv::Point());
-    }*/
+    std::cout << "Contours: " << contours.size() << std::endl;
     
-    std::vector<Vec4f> houghLines; HoughLinesP(lineMask, houghLines, 1, M_PI/180, 20, 10, 10);
+    for (int i = 0; i< contours.size(); i++){
+        //if(contourArea(contours[i], false) > 0){
+            drawContours(smallerImage, contours,
+                             i, Scalar(0, 255, 0),
+                             1, LINE_8,
+                            hierarchy, 0, cv::Point());
+        //}
+        //std::cout << "Contour(" << i << "): " << contourArea(contours[i], false) << std::endl;
+    }
+    
+    /*
+    std::vector<Vec4f> houghLines; HoughLinesP(lineMask, houghLines, 1, M_PI/180, 50, 50, 5);
     for (const Vec4f& detectedLine: houghLines){
         line(smallerImage,
              cv::Point(detectedLine[0], detectedLine[1]),
              cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 0, 0), 2);
-    }
+    }*/
     
     mask = lineMask;
     output = smallerImage;
@@ -209,7 +217,7 @@ int main(int argc, const char * argv[]) {
     
     Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
     Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-    if(false){
+    if(true){
         performTransformFromScreenCapture(lowerBound, upperBound);
     } else {
         performTransformFromLoadedImage(argv[1], lowerBound, upperBound);
