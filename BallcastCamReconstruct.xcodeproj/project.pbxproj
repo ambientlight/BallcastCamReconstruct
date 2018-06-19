@@ -18,7 +18,7 @@
 		1A7C30FF20CEDFED0098474B /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A7C30FE20CEDFED0098474B /* AppKit.framework */; };
 		1AB9BCD120D7DEDA009C4AE3 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AB9BCCC20D7DEDA009C4AE3 /* common.cpp */; };
 		1AB9BCD220D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AB9BCCE20D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp */; };
-		1AB9BCD320D7DEDA009C4AE3 /* Main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AB9BCD020D7DEDA009C4AE3 /* Main.cpp */; };
+		1ACC4E2520D95878007D4675 /* houghTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ACC4E2320D95878007D4675 /* houghTest.cpp */; };
 		1AE8757220D0162A00155F1E /* ImageFilters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AE8757020D0162A00155F1E /* ImageFilters.cpp */; };
 		1AE8757520D01BD800155F1E /* opecvUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AE8757320D01BD800155F1E /* opecvUtils.cpp */; };
 /* End PBXBuildFile section */
@@ -55,7 +55,8 @@
 		1AB9BCCD20D7DEDA009C4AE3 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		1AB9BCCE20D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EllipseDetectorYaed.cpp; sourceTree = "<group>"; };
 		1AB9BCCF20D7DEDA009C4AE3 /* EllipseDetectorYaed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EllipseDetectorYaed.h; sourceTree = "<group>"; };
-		1AB9BCD020D7DEDA009C4AE3 /* Main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Main.cpp; sourceTree = "<group>"; };
+		1ACC4E2320D95878007D4675 /* houghTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = houghTest.cpp; sourceTree = "<group>"; };
+		1ACC4E2420D95878007D4675 /* houghTest.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = houghTest.hpp; sourceTree = "<group>"; };
 		1AE8757020D0162A00155F1E /* ImageFilters.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImageFilters.cpp; sourceTree = "<group>"; };
 		1AE8757120D0162A00155F1E /* ImageFilters.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ImageFilters.hpp; sourceTree = "<group>"; };
 		1AE8757320D01BD800155F1E /* opecvUtils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = opecvUtils.cpp; sourceTree = "<group>"; };
@@ -119,6 +120,8 @@
 				1AE8757420D01BD800155F1E /* opecvUtils.hpp */,
 				1AE8757020D0162A00155F1E /* ImageFilters.cpp */,
 				1AE8757120D0162A00155F1E /* ImageFilters.hpp */,
+				1ACC4E2320D95878007D4675 /* houghTest.cpp */,
+				1ACC4E2420D95878007D4675 /* houghTest.hpp */,
 				1A2D883920C999A30084740E /* Semaphore.h */,
 				1A425E4C20C846BE007E5778 /* ScreenCaptureSource.mm */,
 				1A425E4E20C847E4007E5778 /* ScreenCaptureSource.h */,
@@ -136,7 +139,6 @@
 				1AB9BCCD20D7DEDA009C4AE3 /* common.h */,
 				1AB9BCCE20D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp */,
 				1AB9BCCF20D7DEDA009C4AE3 /* EllipseDetectorYaed.h */,
-				1AB9BCD020D7DEDA009C4AE3 /* Main.cpp */,
 			);
 			path = fornaciari;
 			sourceTree = "<group>";
@@ -199,12 +201,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A425E4D20C846BE007E5778 /* ScreenCaptureSource.mm in Sources */,
+				1ACC4E2520D95878007D4675 /* houghTest.cpp in Sources */,
 				1AB9BCD220D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp in Sources */,
 				1AE8757220D0162A00155F1E /* ImageFilters.cpp in Sources */,
 				1AE8757520D01BD800155F1E /* opecvUtils.cpp in Sources */,
 				1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */,
 				1AB9BCD120D7DEDA009C4AE3 /* common.cpp in Sources */,
-				1AB9BCD320D7DEDA009C4AE3 /* Main.cpp in Sources */,
 				1A42B73920C569BC00896F24 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -15,139 +15,65 @@
 #include "ImageFilters.hpp"
 #include "EllipseDetectorYaed.h"
 
+#ifndef ENABLE_LSD_TRANSFORM
+#define ENABLE_LSD_TRANSFORM true
+#endif
+
+#ifndef USING_SCREEN_CAPTURE
+#define USING_SCREEN_CAPTURE true
+#endif
+
 using namespace cv;
 using namespace std::chrono;
 
-typedef void* CGAccessSessionRef;
+void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
+    Mat target = image.clone();
+    Mat bgrImage; cvtColor(image, bgrImage, COLOR_BGRA2BGR);
+    Mat hsvImage; cvtColor(bgrImage, hsvImage, COLOR_BGR2HSV);
+    Mat grassMask; inRange(hsvImage, lowerBound, upperBound, grassMask);
+    Mat grassOnlyFrameImage; bitwise_and(image, image, grassOnlyFrameImage, grassMask);
+    
+    Mat grayscale; cvtColor(grassOnlyFrameImage, grayscale, CV_BGRA2GRAY);
 
-static void
-createTrigTable( int numangle, double min_theta, double theta_step,
-                float irho, float *tabSin, float *tabCos )
-{
-    float ang = static_cast<float>(min_theta);
-    for(int n = 0; n < numangle; ang += (float)theta_step, n++ )
-    {
-        tabSin[n] = (float)(sin((double)ang) * irho);
-        tabCos[n] = (float)(cos((double)ang) * irho);
-    }
-}
-
-static Mat
-HoughLinesStandard(InputArray src,
-                   float rho, float theta,
-                   int threshold,
-                   double min_theta, double max_theta)
-{
-    Mat img = src.getMat();
-    int i, j;
-    float irho = 1 / rho;
-
-    CV_Assert( img.type() == CV_8UC1 );
+    Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
+    std::vector<Vec4f> lines; detector->detect(grayscale, lines);
     
-    const uchar* image = img.ptr();
-    int step = (int)img.step;
-    int width = img.cols;
-    int height = img.rows;
-    
-    int max_rho = width + height;
-    int min_rho = -max_rho;
-    
-    int numangle = cvRound((max_theta - min_theta) / theta);
-    int numrho = cvRound(((max_rho - min_rho) + 1) / rho);
-    
-    Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
-    std::vector<int> _sort_buf;
-    AutoBuffer<float> _tabSin(numangle);
-    AutoBuffer<float> _tabCos(numangle);
-    int *accum = _accum.ptr<int>();
-    float *tabSin = _tabSin, *tabCos = _tabCos;
-    
-    // create sin and cos table
-    createTrigTable( numangle, min_theta, theta,
-                    irho, tabSin, tabCos );
-    
-    // stage 1. fill accumulator
-    for( i = 0; i < height; i++ ){
-        for( j = 0; j < width; j++ ){
-            if( image[i * step + j] != 0 ){
-                for(int n = 0; n < numangle; n++ ){
-                    int r = cvRound( j * tabCos[n] + i * tabSin[n] );
-                    r += (numrho - 1) / 2;
-                    accum[(n+1) * (numrho+2) + r+1]++;
-                }
-            }
+    Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
+    for (const Vec4f& detectedLine: lines){
+        float length = sqrt(
+              (detectedLine[2] - detectedLine[0]) * (detectedLine[2] - detectedLine[0])
+                            + (detectedLine[3] - detectedLine[1]) * (detectedLine[3] - detectedLine[1]));
+        if(length > 30){
+            line(clearTarget,
+                 cv::Point(detectedLine[0], detectedLine[1]),
+                 cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 0, 0), 2);
         }
     }
     
-    return _accum;
+    mask = grassOnlyFrameImage;
+    output = clearTarget;
 }
 
-void houghTest(Mat image){
-    std::cout << image.size() << ", channels: " << image.channels() << std::endl;
+void lineFilterHoughPFornaciariEllipse(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound, bool sharpen = false, bool dilate = false){
+    Mat target = image.clone();
     
-    Mat edges;
-    Canny(image, edges, 100.0, 200.0);
-    
-    // Measure the time naive hough transform performs
-    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    Mat accum = HoughLinesStandard(edges, 1.0, CV_PI/180, 30, 0, CV_PI);
-    milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    std::cout << end_time.count() - start_time.count() << std::endl;
-    //std::cout << accum;
-    
-    // Create a window for display
-    // Show our image inside it.
-    // And wait for keystoke in the window
-    // namedWindow("Display window", WINDOW_AUTOSIZE);
-    // imshow("Display window", edges);
-    // waitKey(0);
-}
-
-/*
-void screenshotAndDisplayInOpenCV() {
-    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    CGImageRef imageRef = CGWindowListCreateImage(CGRectInfinite, kCGWindowListOptionAll, kCGNullWindowID, kCGWindowImageDefault);
-    CFDataRef rawData = CGDataProviderCopyData(CGImageGetDataProvider(imageRef));
-    uint8_t* buffer = (uint8_t*)CFDataGetBytePtr(rawData);
-    
-    // CGAccessSessionRef imageDataSession = CGAccessSessionCreate(CGImageGetDataProvider(imageRef));
-    // uint8_t* buffer = (uint8_t*)CGAccessSessionGetBytePointer(imageDataSession);
-    
-    std::cout << (int)CGImageGetHeight(imageRef) << std::endl;
-    std::cout << (int)CGImageGetWidth(imageRef) << std::endl;
-    
-    Mat image = Mat((int)CGImageGetHeight(imageRef), (int)CGImageGetWidth(imageRef), CV_8UC4, buffer);
-    CGImageRelease(imageRef);
-    
-    milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    std::cout << end_time.count() - start_time.count() << std::endl;
-    
-    // Create a window for display
-    // Show our image inside it.
-    // And wait for keystoke in the window
-    namedWindow("Display window", WINDOW_AUTOSIZE);
-    imshow("Display window", image);
-    waitKey(0);
-}
-*/
-
-void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
-    Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
-    
-    
-    //GaussianBlur(smallerImage, smallerImage, Size(3, 3), 0);
-    Mat kern = (Mat_<char>(3, 3) <<
+    // add sharpening to enhance lines
+    if(sharpen){
+        Mat kern = (Mat_<char>(3, 3) <<
                 -1, -1, -1,
                 -1, 9, -1,
                 -1, -1, -1);
-    filter2D(smallerImage, smallerImage, smallerImage.depth(), kern);
+        filter2D(target, target, target.depth(), kern);
+    }
     
+    // perform core line detection that involves filtering out non-grass and simple custom min(half-line diff)
+    Mat lineMask; filteredSlowLineMask(target, lineMask, lowerBound, upperBound,
+                                       14,  // half line width
+                                       50); // line filter threshold
     
-    Mat lineMask; filteredSlowLineMask(smallerImage, lineMask, lowerBound, upperBound, 14);
-    
-    
-    Mat ellipseDetectInput; cvtColor(smallerImage, ellipseDetectInput, CV_BGRA2GRAY);
-    Size sz = smallerImage.size();
+    // grab an original grayscale image for ellipse detection
+    Mat grayscale; cvtColor(image, grayscale, CV_BGRA2GRAY);
+    Size sz = grayscale.size();
     
     // Parameters Settings (Sect. 4.2)
     int    iThLength = 16;
@@ -177,41 +103,29 @@ void coreTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar 
                        iNs);
     
     vector<Ellipse> detectedEllipses;
-    yaed.Detect(ellipseDetectInput, detectedEllipses);
-    yaed.DrawDetectedEllipses((Mat3b&)smallerImage, detectedEllipses, 1);
+    yaed.Detect(grayscale, detectedEllipses);
+    yaed.DrawDetectedEllipses((Mat3b&)target, detectedEllipses, 1);
     
-    //Mat kernel = getStructuringElement(MORPH_RECT, cv::Size(2, 2));
-    //dilate(lineMask, lineMask, kernel);
-    /*
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<Vec4i> hierarchy;
-    findContours(lineMask, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE);
-    std::cout << "Contours: " << contours.size() << std::endl;
-    
-    for (int i = 0; i< contours.size(); i++){
-        //if(contourArea(contours[i], false) > 0){
-            drawContours(smallerImage, contours,
-                             i, Scalar(0, 255, 0),
-                             1, LINE_8,
-                            hierarchy, 0, cv::Point());
-        //}
-        //std::cout << "Contour(" << i << "): " << contourArea(contours[i], false) << std::endl;
+    // dilate to help connecting weak lines together
+    if(dilate){
+        Mat kernel = getStructuringElement(MORPH_RECT, cv::Size(3, 3));
+        cv::dilate(lineMask, lineMask, kernel);
     }
-    */
     
+    // probabilistic hough lines transform: fast but wobbling
     std::vector<Vec4f> houghLines; HoughLinesP(lineMask, houghLines, 1, M_PI/180,
                                                100, 50, 10);
     for (const Vec4f& detectedLine: houghLines){
-        line(smallerImage,
+        line(target,
              cv::Point(detectedLine[0], detectedLine[1]),
              cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 0, 0), 2);
     }
     
     mask = lineMask;
-    output = smallerImage;
+    output = target;
 }
 
-void performTransformFromScreenCapture(Scalar lowerBound, Scalar upperBound){
+void performTransformFromScreenCapture(){
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore();
     source.init(semaphor);
@@ -226,12 +140,22 @@ void performTransformFromScreenCapture(Scalar lowerBound, Scalar upperBound){
         
         unsigned char* buffer = source.getBaseAddress(imageBuffer);
         Mat image = Mat((int)source.bufferHeight(imageBuffer), (int)source.bufferWidth(imageBuffer), CV_8UC4, buffer);
-        Mat lineMask; Mat smallerImage; coreTransform(image, lineMask, smallerImage, lowerBound, upperBound);
+        Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+        
+        #if ENABLE_LSD_TRANSFORM
+            Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
+            Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+            Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
+        #else
+            Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
+            Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+            Mat lineMask; lineFilterHoughPFornaciariEllipse(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
+        #endif
         
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         std::cout << end_time.count() - start_time.count() << std::endl;
         
-        imshow("Line Mask", lineMask);
+        //imshow("Line Mask", lineMask);
         imshow("Detected Lines", smallerImage);
         char c = (char)waitKey(1);
         if(c == 27)
@@ -243,10 +167,21 @@ void performTransformFromScreenCapture(Scalar lowerBound, Scalar upperBound){
     delete semaphor;
 }
 
-void performTransformFromLoadedImage(const String& filename, Scalar lowerBound, Scalar upperBound){
+void performTransformFromLoadedImage(const String& filename){
     Mat image = imread(filename);
-    Mat lineMask; Mat smallerImage; coreTransform(image, lineMask, smallerImage, lowerBound, upperBound);
-    imshow("Line Mask", lineMask);
+    Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+    
+    #if ENABLE_LSD_TRANSFORM
+        Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
+        Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+        Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
+    #else
+        Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
+        Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+        Mat lineMask; lineFilterHoughPFornaciariEllipse(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
+    #endif
+    
+    //imshow("Line Mask", lineMask);
     imshow("Detected Lines", smallerImage);
     waitKey();
 }
@@ -258,14 +193,12 @@ int main(int argc, const char * argv[]) {
     if(argc < 2){
         std::cout << "Expected file name passed" << std::endl;
     }
-    
-    Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
-    Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-    if(true){
-        performTransformFromScreenCapture(lowerBound, upperBound);
-    } else {
-        performTransformFromLoadedImage(argv[1], lowerBound, upperBound);
-    }
+
+    #if USING_SCREEN_CAPTURE
+        performTransformFromScreenCapture();
+    #else
+        performTransformFromLoadedImage(argv[1]);
+    #endif
 }
 
 

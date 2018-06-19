@@ -41,12 +41,12 @@ void filteredLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar higherGr
     output = targetMask;
 }
 
-void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar higherGreen, uint64_t lineWidth){
-    Mat hsvImage; cvtColor(image, hsvImage, COLOR_BGR2HSV);
+void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar higherGreen, uint64_t lineWidth, int threshold){
+    Mat bgrImage; cvtColor(image, bgrImage, COLOR_BGRA2BGR);
+    Mat hsvImage; cvtColor(bgrImage, hsvImage, COLOR_BGR2HSV);
     
     Mat grassMask; inRange(hsvImage, lowerGreen, higherGreen, grassMask);
-    //Mat nonGrassMask; bitwise_not(grassMask, nonGrassMask);
-
+    // remove non-grass
     Mat grassOnlyFrameImage; bitwise_and(image, image, grassOnlyFrameImage, grassMask);
     output = grassOnlyFrameImage;
     
@@ -55,7 +55,6 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
 
     Mat blueComponent; extractChannel(lineSearchSpace, blueComponent, 0);
     int halfLineWidth = (int)lineWidth / 2;
-    
     blueComponent.forEach<uint8_t>([&](uint8_t& b, const int* position) -> void {
         int rowIndex = position[0];
         int columnIndex = position[1];
@@ -93,7 +92,7 @@ void filteredSlowLineMask(Mat image, Mat& output, Scalar lowerGreen, Scalar high
             b = 0;
         }
         
-        b = b > 50 ? b : 0;
+        b = b > threshold ? b : 0;
     });
     
     
