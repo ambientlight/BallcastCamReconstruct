@@ -69,6 +69,10 @@
             argument = "test_frames/00.png"
             isEnabled = "YES">
          </CommandLineArgument>
+         <CommandLineArgument
+            argument = "frames"
+            isEnabled = "YES">
+         </CommandLineArgument>
       </CommandLineArguments>
       <AdditionalOptions>
       </AdditionalOptions>

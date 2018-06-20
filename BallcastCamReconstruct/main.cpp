@@ -20,11 +20,40 @@
 #endif
 
 #ifndef USING_SCREEN_CAPTURE
-#define USING_SCREEN_CAPTURE true
+#define USING_SCREEN_CAPTURE false
+#endif
+
+#ifndef CUSTOM_EXPORT_SESSION
+#define CUSTOM_EXPORT_SESSION false
 #endif
 
 using namespace cv;
 using namespace std::chrono;
+
+bool lineEquivalence(const Vec4i& _l1, const Vec4i& _l2)
+{
+    Vec4i l1(_l1), l2(_l2);
+    
+    float length1 = sqrtf((l1[2] - l1[0])*(l1[2] - l1[0]) + (l1[3] - l1[1])*(l1[3] - l1[1]));
+    float length2 = sqrtf((l2[2] - l2[0])*(l2[2] - l2[0]) + (l2[3] - l2[1])*(l2[3] - l2[1]));
+    
+    float product = (l1[2] - l1[0])*(l2[2] - l2[0]) + (l1[3] - l1[1])*(l2[3] - l2[1]);
+    
+    if (fabs(product / (length1 * length2)) < cos(CV_PI / 30))
+        return false;
+    
+    float mx1 = (l1[0] + l1[2]) * 0.5f;
+    float mx2 = (l2[0] + l2[2]) * 0.5f;
+    
+    float my1 = (l1[1] + l1[3]) * 0.5f;
+    float my2 = (l2[1] + l2[3]) * 0.5f;
+    float dist = sqrtf((mx1 - mx2)*(mx1 - mx2) + (my1 - my2)*(my1 - my2));
+    
+    if (dist > std::max(length1, length2) * 0.5f)
+        return false;
+    
+    return true;
+}
 
 void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
     Mat target = image.clone();
@@ -37,17 +66,32 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
 
     Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
     std::vector<Vec4f> lines; detector->detect(grayscale, lines);
+    std::vector<Vec4f> linesWithoutSmall;
+    std::copy_if (lines.begin(), lines.end(), std::back_inserter(linesWithoutSmall), [](Vec4f line){
+        float length = sqrtf((line[2] - line[0]) * (line[2] - line[0])
+                           + (line[3] - line[1]) * (line[3] - line[1]));
+        return length > 30;
+    });
+    
+    std::cout << "Detected " << lines.size() << " lines" << std::endl;
+    std::cout << "Without small " << linesWithoutSmall.size() << " lines" << std::endl;
+    
+    std::vector<int> labels;
+    int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, lineEquivalence);
+    std::cout << "Equivalence classes: " << equilavenceClassesCount << std::endl;
+    
+    RNG rng(215526);
+    std::vector<Scalar> colors(equilavenceClassesCount);
+    for (int i = 0; i < equilavenceClassesCount; i++){
+        colors[i] = Scalar(rng.uniform(30,255), rng.uniform(30, 255), rng.uniform(30, 255));;
+    }
     
     Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
-    for (const Vec4f& detectedLine: lines){
-        float length = sqrt(
-              (detectedLine[2] - detectedLine[0]) * (detectedLine[2] - detectedLine[0])
-                            + (detectedLine[3] - detectedLine[1]) * (detectedLine[3] - detectedLine[1]));
-        if(length > 30){
-            line(clearTarget,
-                 cv::Point(detectedLine[0], detectedLine[1]),
-                 cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 0, 0), 2);
-        }
+    for (int i = 0; i < linesWithoutSmall.size(); i++){
+        Vec4f& detectedLine = linesWithoutSmall[i];
+        line(clearTarget,
+             cv::Point(detectedLine[0], detectedLine[1]),
+             cv::Point(detectedLine[2], detectedLine[3]), colors[labels[i]], 2);
     }
     
     mask = grassOnlyFrameImage;
@@ -186,15 +230,21 @@ void performTransformFromLoadedImage(const String& filename){
     waitKey();
 }
 
+void performCustomExportSession(const String& folderPath){
+    vector<String> matchedFilenames; glob(folderPath + "/*.png", matchedFilenames);
+}
+
 int main(int argc, const char * argv[]) {
     namedWindow("Line Mask", WINDOW_NORMAL);
     namedWindow("Detected Lines", WINDOW_NORMAL);
     
-    if(argc < 2){
-        std::cout << "Expected file name passed" << std::endl;
+    if(argc < 3){
+        std::cout << "Expected file name and frames folder passed" << std::endl;
     }
 
-    #if USING_SCREEN_CAPTURE
+    #if CUSTOM_EXPORT_SESSION
+        performCustomExportSession(argv[2]);
+    #elif USING_SCREEN_CAPTURE
         performTransformFromScreenCapture();
     #else
         performTransformFromLoadedImage(argv[1]);
