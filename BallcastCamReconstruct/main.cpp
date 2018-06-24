@@ -30,6 +30,54 @@
 using namespace cv;
 using namespace std::chrono;
 
+Vec2f linearParameters(Vec4i line){
+    Mat a = (Mat_<float>(2, 2) <<
+                line[0], 1,
+                line[2], 1);
+    Mat y = (Mat_<float>(2, 1) <<
+                line[1],
+                line[3]);
+    Vec2f mc; solve(a, y, mc);
+    std::cout << mc << std::endl;
+    return mc;
+}
+
+std::vector<std::vector<Point2i>> boundingRectangleContour(Vec4i& line, float d){
+    Vec2f mc = linearParameters(line);
+    float m = mc[0], c = mc[1];
+    float factor = sqrtf((d * d) / (1 + 1 / (m * m)));
+    
+    // slope of perfendicular lines
+    float m_per = - 1/m;
+    // y1 = m_per * x1 + b
+    float c_per1 = line[1] - m_per * line[0];
+    float c_per2 = line[3] - m_per * line[2];
+    
+    // coordinates of perpendicular lines
+    int x3 = line[0] - factor, y3 = m_per * x3 + c_per1;
+    int x4 = line[0] + factor, y4 = m_per * x4 + c_per1;
+    int x5 = line[2] + factor, y5 = m_per * x5 + c_per2;
+    int x6 = line[2] - factor, y6 = m_per * x6 + c_per2;
+    
+    std::vector<Point2i> boundingRect = {
+        Point2i(x3, y3),
+        Point2i(x4, y4),
+        Point2i(x5, y5),
+        Point2i(x6, y6),
+        Point2i(x3, y3)
+    };
+    return std::vector<std::vector<Point2i>>{ boundingRect };
+}
+
+/*
+bool extendedBoundingRectangleLineEquivalence(Vec4i& l1, const Vec4i& l2){
+    // distance from line to bounding rectangle edge
+    float d = 5;
+    
+    return false;
+}
+*/
+
 bool lineEquivalence(const Vec4i& _l1, const Vec4i& _l2)
 {
     Vec4i l1(_l1), l2(_l2);
@@ -242,6 +290,9 @@ int main(int argc, const char * argv[]) {
         std::cout << "Expected file name and frames folder passed" << std::endl;
     }
 
+    Vec4i line = Vec4i(1956, 452, 1235, 435);
+    linearParameters(line);
+    
     #if CUSTOM_EXPORT_SESSION
         performCustomExportSession(argv[2]);
     #elif USING_SCREEN_CAPTURE
