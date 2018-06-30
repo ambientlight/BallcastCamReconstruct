@@ -67,7 +67,6 @@ std::vector<Point2i> boundingRectangleContour(Vec4i& line, float d){
     } else {
         // slope of perfendicular lines
         float m_per = - 1/m;
-        std::cout << m_per << std::endl;
         
         // y1 = m_per * x1 + b
         float c_per1 = line[1] - m_per * line[0];
@@ -89,10 +88,29 @@ std::vector<Point2i> boundingRectangleContour(Vec4i& line, float d){
 }
 
 
-bool extendedBoundingRectangleLineEquivalence(Vec4i& l1, const Vec4i& l2){
-    // distance from line to bounding rectangle edge
+bool extendedBoundingRectangleLineEquivalence(const Vec4i& _l1, const Vec4i& _l2, float extensionLengthFraction, float maxAngleDiff, float boundingRectangleThickness){
     
-    return false;
+    Vec4i l1(_l1), l2(_l2);
+    // extend lines by percentage of line width
+    float len1 = sqrtf((l1[2] - l1[0])*(l1[2] - l1[0]) + (l1[3] - l1[1])*(l1[3] - l1[1]));
+    float len2 = sqrtf((l2[2] - l2[0])*(l2[2] - l2[0]) + (l2[3] - l2[1])*(l2[3] - l2[1]));
+    Vec4i el1 = extendedLine(l1, len1 * extensionLengthFraction);
+    Vec4i el2 = extendedLine(l2, len2 * extensionLengthFraction);
+    
+    // reject the lines that have wide difference in angles
+    float a1 = atan(linearParameters(el1)[0]) * 180.0 / M_PI;
+    float a2 = atan(linearParameters(el2)[0]) * 180.0 / M_PI;
+    
+    if(fabs(a1 - a2) > maxAngleDiff){
+        return false;
+    }
+    
+    // calculate window around extended line
+    // at least one point needs to inside extended bounding rectangle of other line,
+    std::vector<Point2i> lineBoundingContour = boundingRectangleContour(el1, boundingRectangleThickness/2);
+    return
+        pointPolygonTest(lineBoundingContour, cv::Point(el2[0], el2[1]), false) == 1 ||
+        pointPolygonTest(lineBoundingContour, cv::Point(el2[2], el2[3]), false) == 1;
 }
 
 
@@ -143,7 +161,10 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
     std::cout << "Without small " << linesWithoutSmall.size() << " lines" << std::endl;
     
     std::vector<int> labels;
-    int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, lineEquivalence);
+    int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, [](const Vec4i l1, const Vec4i l2){
+        return extendedBoundingRectangleLineEquivalence(l1, l2, 0.5, 5.0, 10);
+    });
+    
     std::cout << "Equivalence classes: " << equilavenceClassesCount << std::endl;
     
     RNG rng(215526);
@@ -154,16 +175,10 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
     
     Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
     for (int i = 0; i < linesWithoutSmall.size(); i++){
-        if(i < 10 || i > 20){ continue; }
         Vec4i& detectedLine = linesWithoutSmall[i];
-        Vec4i extended = extendedLine(detectedLine, 20);
-        
         line(clearTarget,
              cv::Point(detectedLine[0], detectedLine[1]),
              cv::Point(detectedLine[2], detectedLine[3]), colors[labels[i]], 1);
-        
-        std::vector<Point2i> lineBoundingContour = boundingRectangleContour(extended, 10);
-        drawContours(clearTarget, std::vector<std::vector<Point2i>>{ lineBoundingContour }, 0, colors[labels[i]]);
     }
     
     mask = grassOnlyFrameImage;
