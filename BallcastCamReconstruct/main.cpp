@@ -21,7 +21,7 @@
 #endif
 
 #ifndef USING_SCREEN_CAPTURE
-#define USING_SCREEN_CAPTURE false
+#define USING_SCREEN_CAPTURE true
 #endif
 
 #ifndef CUSTOM_EXPORT_SESSION
@@ -42,7 +42,7 @@ Vec2d linearParameters(Vec4i line){
     return mc;
 }
 
-Vec4i extendedLine(Vec4i& line, double d){
+Vec4i extendedLine(Vec4i line, double d){
     // oriented left-t-right
     Vec4d _line = line[2] - line[0] < 0 ? Vec4d(line[2], line[3], line[0], line[1]) : Vec4d(line[0], line[1], line[2], line[3]);
     double m = linearParameters(_line)[0];
@@ -52,7 +52,7 @@ Vec4i extendedLine(Vec4i& line, double d){
     return Vec4d(_line[0] - xd, _line[1] - yd , _line[2] + xd, _line[3] + yd);
 }
 
-std::vector<Point2i> boundingRectangleContour(Vec4i& line, float d){
+std::vector<Point2i> boundingRectangleContour(Vec4i line, float d){
     // finds coordinates of perpendicular lines with length d in both line points
     // https://math.stackexchange.com/a/2043065/183923
     
@@ -117,32 +117,6 @@ bool extendedBoundingRectangleLineEquivalence(const Vec4i& _l1, const Vec4i& _l2
         pointPolygonTest(lineBoundingContour, cv::Point(el2[2], el2[3]), false) == 1;
 }
 
-
-bool lineEquivalence(const Vec4i& _l1, const Vec4i& _l2)
-{
-    Vec4i l1(_l1), l2(_l2);
-    
-    float length1 = sqrtf((l1[2] - l1[0])*(l1[2] - l1[0]) + (l1[3] - l1[1])*(l1[3] - l1[1]));
-    float length2 = sqrtf((l2[2] - l2[0])*(l2[2] - l2[0]) + (l2[3] - l2[1])*(l2[3] - l2[1]));
-    
-    float product = (l1[2] - l1[0])*(l2[2] - l2[0]) + (l1[3] - l1[1])*(l2[3] - l2[1]);
-    
-    if (fabs(product / (length1 * length2)) < cos(CV_PI / 30))
-        return false;
-    
-    float mx1 = (l1[0] + l1[2]) * 0.5f;
-    float mx2 = (l2[0] + l2[2]) * 0.5f;
-    
-    float my1 = (l1[1] + l1[3]) * 0.5f;
-    float my2 = (l2[1] + l2[3]) * 0.5f;
-    float dist = sqrtf((mx1 - mx2)*(mx1 - mx2) + (my1 - my2)*(my1 - my2));
-    
-    if (dist > std::max(length1, length2) * 0.5f)
-        return false;
-    
-    return true;
-}
-
 void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
     Mat target = image.clone();
     Mat bgrImage; cvtColor(image, bgrImage, COLOR_BGRA2BGR);
@@ -161,31 +135,12 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
         return length > 30;
     });
     
-    std::cout << "Detected " << lines.size() << " lines" << std::endl;
-    std::cout << "Without small " << linesWithoutSmall.size() << " lines" << std::endl;
-    
     std::vector<int> labels;
     int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, [](const Vec4i l1, const Vec4i l2){
         return extendedBoundingRectangleLineEquivalence(l1, l2, 0.5, 4.0, 10);
     });
     
-    std::cout << "Equivalence classes: " << equilavenceClassesCount << std::endl;
-    
-    RNG rng(215526);
-    std::vector<Scalar> colors(equilavenceClassesCount);
-    for (int i = 0; i < equilavenceClassesCount; i++){
-        colors[i] = Scalar(rng.uniform(30,255), rng.uniform(30, 255), rng.uniform(30, 255));;
-    }
-    
     Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
-    /*
-    for (int i = 0; i < linesWithoutSmall.size(); i++){
-        Vec4i& detectedLine = linesWithoutSmall[i];
-        line(clearTarget,
-             cv::Point(detectedLine[0], detectedLine[1]),
-             cv::Point(detectedLine[2], detectedLine[3]), colors[labels[i]], 1);
-    }*/
-    
     // point cloud out of each equivalence classes
     std::vector<std::vector<Point2i>> pointClouds(equilavenceClassesCount);
     for (int i = 0; i < linesWithoutSmall.size(); i++){
@@ -194,24 +149,19 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
         pointClouds[labels[i]].push_back(Point2i(detectedLine[2], detectedLine[3]));
     }
     
-    for(int i = 0; i < equilavenceClassesCount; i++){
-        std::vector<Point2i> pointCloud = pointClouds[i];
+    for(std::vector<Point2i> pointCloud: pointClouds){
         Vec4f lineParams; fitLine(Mat(pointCloud), lineParams, CV_DIST_L2, 0, 0.01, 0.01);
         
         // derive the bounding box of point cloud
         decltype(pointCloud)::iterator minXP, maxXP, minYP, maxYP;
         std::tie(minXP, maxXP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.x < p2.x; });
         std::tie(minYP, maxYP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.y < p2.y; });
-        
-        //std::cout << lineParams << std::endl;
-        
+    
         // derive y coords of fitted line
-        // lineParams provide us a slope(lineParams[1] / lineParams[0])
-        // and a point on a contour through which line passes
         float m = lineParams[1] / lineParams[0];
         int y1 = ((minXP->x - lineParams[2]) * m) + lineParams[3];
         int y2 = ((maxXP->x - lineParams[2]) * m) + lineParams[3];
-        cv::line(clearTarget, Point(maxXP->x, y2), Point(minXP->x, y1), colors[i], 1);
+        cv::line(clearTarget, Point(maxXP->x, y2), Point(minXP->x, y1), Scalar(255, 255, 255), 1);
     }
     
     mask = grassOnlyFrameImage;
