@@ -30,53 +30,71 @@
 using namespace cv;
 using namespace std::chrono;
 
-Vec2f linearParameters(Vec4i line){
-    Mat a = (Mat_<float>(2, 2) <<
+Vec2d linearParameters(Vec4i line){
+    Mat a = (Mat_<double>(2, 2) <<
                 line[0], 1,
                 line[2], 1);
-    Mat y = (Mat_<float>(2, 1) <<
+    Mat y = (Mat_<double>(2, 1) <<
                 line[1],
                 line[3]);
-    Vec2f mc; solve(a, y, mc);
-    std::cout << mc << std::endl;
+    Vec2d mc; solve(a, y, mc);
     return mc;
 }
 
-std::vector<std::vector<Point2i>> boundingRectangleContour(Vec4i& line, float d){
-    Vec2f mc = linearParameters(line);
-    float m = mc[0], c = mc[1];
-    float factor = sqrtf((d * d) / (1 + 1 / (m * m)));
-    
-    // slope of perfendicular lines
-    float m_per = - 1/m;
-    // y1 = m_per * x1 + b
-    float c_per1 = line[1] - m_per * line[0];
-    float c_per2 = line[3] - m_per * line[2];
-    
-    // coordinates of perpendicular lines
-    int x3 = line[0] - factor, y3 = m_per * x3 + c_per1;
-    int x4 = line[0] + factor, y4 = m_per * x4 + c_per1;
-    int x5 = line[2] + factor, y5 = m_per * x5 + c_per2;
-    int x6 = line[2] - factor, y6 = m_per * x6 + c_per2;
-    
-    std::vector<Point2i> boundingRect = {
-        Point2i(x3, y3),
-        Point2i(x4, y4),
-        Point2i(x5, y5),
-        Point2i(x6, y6),
-        Point2i(x3, y3)
-    };
-    return std::vector<std::vector<Point2i>>{ boundingRect };
+Vec4i extendedLine(Vec4i& line, double d){
+    // oriented left-t-right
+    Vec4d _line = line[2] - line[0] < 0 ? Vec4d(line[2], line[3], line[0], line[1]) : Vec4d(line[0], line[1], line[2], line[3]);
+    double m = linearParameters(_line)[0];
+    double xd = sqrt(d * d / (m * m + 1));
+    double yd = xd * m;
+    return Vec4d(_line[0] - xd, _line[1] - yd , _line[2] + xd, _line[3] + yd);
 }
 
-/*
+std::vector<Point2i> boundingRectangleContour(Vec4i& line, float d){
+    Vec2f mc = linearParameters(line);
+    float m = mc[0];
+    float factor = sqrtf(
+        (d * d) / (1 + (1 / (m * m)))
+    );
+    
+    float x3, y3, x4, y4, x5, y5, x6, y6;
+    // special case(vertical perpendicular line) when -1/m -> -infinity
+    if(m == 0){
+        x3 = line[0]; y3 = line[1] + d;
+        x4 = line[0]; y4 = line[1] - d;
+        x5 = line[2]; y5 = line[3] + d;
+        x6 = line[2]; y6 = line[3] - d;
+    } else {
+        // slope of perfendicular lines
+        float m_per = - 1/m;
+        std::cout << m_per << std::endl;
+        
+        // y1 = m_per * x1 + b
+        float c_per1 = line[1] - m_per * line[0];
+        float c_per2 = line[3] - m_per * line[2];
+        
+        // coordinates of perpendicular lines
+        x3 = line[0] + factor; y3 = m_per * x3 + c_per1;
+        x4 = line[0] - factor; y4 = m_per * x4 + c_per1;
+        x5 = line[2] + factor; y5 = m_per * x5 + c_per2;
+        x6 = line[2] - factor; y6 = m_per * x6 + c_per2;
+    }
+
+    return std::vector<Point2i> {
+        Point2i(x3, y3),
+        Point2i(x4, y4),
+        Point2i(x6, y6),
+        Point2i(x5, y5)
+    };
+}
+
+
 bool extendedBoundingRectangleLineEquivalence(Vec4i& l1, const Vec4i& l2){
     // distance from line to bounding rectangle edge
-    float d = 5;
     
     return false;
 }
-*/
+
 
 bool lineEquivalence(const Vec4i& _l1, const Vec4i& _l2)
 {
@@ -113,8 +131,8 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
     Mat grayscale; cvtColor(grassOnlyFrameImage, grayscale, CV_BGRA2GRAY);
 
     Ptr<LineSegmentDetector> detector = createLineSegmentDetector(LSD_REFINE_STD);
-    std::vector<Vec4f> lines; detector->detect(grayscale, lines);
-    std::vector<Vec4f> linesWithoutSmall;
+    std::vector<Vec4i> lines; detector->detect(grayscale, lines);
+    std::vector<Vec4i> linesWithoutSmall;
     std::copy_if (lines.begin(), lines.end(), std::back_inserter(linesWithoutSmall), [](Vec4f line){
         float length = sqrtf((line[2] - line[0]) * (line[2] - line[0])
                            + (line[3] - line[1]) * (line[3] - line[1]));
@@ -136,10 +154,16 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
     
     Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
     for (int i = 0; i < linesWithoutSmall.size(); i++){
-        Vec4f& detectedLine = linesWithoutSmall[i];
+        if(i < 10 || i > 20){ continue; }
+        Vec4i& detectedLine = linesWithoutSmall[i];
+        Vec4i extended = extendedLine(detectedLine, 20);
+        
         line(clearTarget,
              cv::Point(detectedLine[0], detectedLine[1]),
-             cv::Point(detectedLine[2], detectedLine[3]), colors[labels[i]], 2);
+             cv::Point(detectedLine[2], detectedLine[3]), colors[labels[i]], 1);
+        
+        std::vector<Point2i> lineBoundingContour = boundingRectangleContour(extended, 10);
+        drawContours(clearTarget, std::vector<std::vector<Point2i>>{ lineBoundingContour }, 0, colors[labels[i]]);
     }
     
     mask = grassOnlyFrameImage;
