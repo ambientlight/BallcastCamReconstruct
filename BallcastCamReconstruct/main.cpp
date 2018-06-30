@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <algorithm>
 #include "ScreenCaptureSourceWrapper.h"
 
 #include "Semaphore.h"
@@ -45,12 +46,16 @@ Vec4i extendedLine(Vec4i& line, double d){
     // oriented left-t-right
     Vec4d _line = line[2] - line[0] < 0 ? Vec4d(line[2], line[3], line[0], line[1]) : Vec4d(line[0], line[1], line[2], line[3]);
     double m = linearParameters(_line)[0];
+    // solution of pythagorean theorem and m = yd/xd
     double xd = sqrt(d * d / (m * m + 1));
     double yd = xd * m;
     return Vec4d(_line[0] - xd, _line[1] - yd , _line[2] + xd, _line[3] + yd);
 }
 
 std::vector<Point2i> boundingRectangleContour(Vec4i& line, float d){
+    // finds coordinates of perpendicular lines with length d in both line points
+    // https://math.stackexchange.com/a/2043065/183923
+    
     Vec2f mc = linearParameters(line);
     float m = mc[0];
     float factor = sqrtf(
@@ -65,7 +70,7 @@ std::vector<Point2i> boundingRectangleContour(Vec4i& line, float d){
         x5 = line[2]; y5 = line[3] + d;
         x6 = line[2]; y6 = line[3] - d;
     } else {
-        // slope of perfendicular lines
+        // slope of perpendicular lines
         float m_per = - 1/m;
         
         // y1 = m_per * x1 + b
@@ -98,10 +103,9 @@ bool extendedBoundingRectangleLineEquivalence(const Vec4i& _l1, const Vec4i& _l2
     Vec4i el2 = extendedLine(l2, len2 * extensionLengthFraction);
     
     // reject the lines that have wide difference in angles
-    float a1 = atan(linearParameters(el1)[0]) * 180.0 / M_PI;
-    float a2 = atan(linearParameters(el2)[0]) * 180.0 / M_PI;
-    
-    if(fabs(a1 - a2) > maxAngleDiff){
+    float a1 = atan(linearParameters(el1)[0]);
+    float a2 = atan(linearParameters(el2)[0]);
+    if(fabs(a1 - a2) > maxAngleDiff * M_PI / 180.0){
         return false;
     }
     
@@ -162,7 +166,7 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
     
     std::vector<int> labels;
     int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, [](const Vec4i l1, const Vec4i l2){
-        return extendedBoundingRectangleLineEquivalence(l1, l2, 0.5, 5.0, 10);
+        return extendedBoundingRectangleLineEquivalence(l1, l2, 0.5, 4.0, 10);
     });
     
     std::cout << "Equivalence classes: " << equilavenceClassesCount << std::endl;
@@ -174,11 +178,40 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
     }
     
     Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
+    /*
     for (int i = 0; i < linesWithoutSmall.size(); i++){
         Vec4i& detectedLine = linesWithoutSmall[i];
         line(clearTarget,
              cv::Point(detectedLine[0], detectedLine[1]),
              cv::Point(detectedLine[2], detectedLine[3]), colors[labels[i]], 1);
+    }*/
+    
+    // point cloud out of each equivalence classes
+    std::vector<std::vector<Point2i>> pointClouds(equilavenceClassesCount);
+    for (int i = 0; i < linesWithoutSmall.size(); i++){
+        Vec4i& detectedLine = linesWithoutSmall[i];
+        pointClouds[labels[i]].push_back(Point2i(detectedLine[0], detectedLine[1]));
+        pointClouds[labels[i]].push_back(Point2i(detectedLine[2], detectedLine[3]));
+    }
+    
+    for(int i = 0; i < equilavenceClassesCount; i++){
+        std::vector<Point2i> pointCloud = pointClouds[i];
+        Vec4f lineParams; fitLine(Mat(pointCloud), lineParams, CV_DIST_L2, 0, 0.01, 0.01);
+        
+        // derive the bounding box of point cloud
+        decltype(pointCloud)::iterator minXP, maxXP, minYP, maxYP;
+        std::tie(minXP, maxXP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.x < p2.x; });
+        std::tie(minYP, maxYP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.y < p2.y; });
+        
+        //std::cout << lineParams << std::endl;
+        
+        // derive y coords of fitted line
+        // lineParams provide us a slope(lineParams[1] / lineParams[0])
+        // and a point on a contour through which line passes
+        float m = lineParams[1] / lineParams[0];
+        int y1 = ((minXP->x - lineParams[2]) * m) + lineParams[3];
+        int y2 = ((maxXP->x - lineParams[2]) * m) + lineParams[3];
+        cv::line(clearTarget, Point(maxXP->x, y2), Point(minXP->x, y1), colors[i], 1);
     }
     
     mask = grassOnlyFrameImage;
