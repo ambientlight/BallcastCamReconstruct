@@ -70,7 +70,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "frames"
+            argument = "line_frames"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

@@ -9,10 +9,12 @@
 #include <iostream>
 #include <chrono>
 #include <algorithm>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <nlohmann/json.hpp>
 
 #include "ScreenCaptureSourceWrapper.h"
-
 #include "Semaphore.h"
 #include "opecvUtils.hpp"
 #include "ImageFilters.hpp"
@@ -314,22 +316,20 @@ void performTransformFromLoadedImage(const String& filename){
     waitKey();
 }
 
-void performCustomExportSession(const String& folderPath){
+void performCustomExportSession(const std::string& outputFolderPath){
     //vector<String> matchedFilenames; glob(folderPath + "/*.png", matchedFilenames);
     //std::copy(matchedFilenames.begin(), matchedFilenames.end(), std::ostream_iterator<String>(cout, "\n"));
     
     std::ifstream jsonInput("frame_data.json");
     json frameData; jsonInput >> frameData;
 
+    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::cout << "Frames(all): " << frameData.size() << std::endl;
     std::vector<json> regularFrames; std::copy_if(frameData.begin(), frameData.end(), std::back_inserter(regularFrames), [](const json& element){
         return element["type"] == "regular";
     });
-    
-    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    
     std::cout << "Frames(regular): " << regularFrames.size() << std::endl;
-    std::vector<json> extendedFrames; std::transform(regularFrames.begin(), regularFrames.end(), std::back_inserter(extendedFrames), [](const json& regularFrame){
+    std::vector<json> extendedFrames; std::transform(regularFrames.begin(), regularFrames.end(), std::back_inserter(extendedFrames), [&](const json& regularFrame){
         json frame = regularFrame;
         
         std::string path = regularFrame["imagePath"];
@@ -341,30 +341,28 @@ void performCustomExportSession(const String& folderPath){
         std::vector<std::vector<int>> linesCompat; std::transform(lines.begin(), lines.end(), std::back_inserter(linesCompat), [](const Vec4i& line){
             return std::vector<int>{ line[0], line[1], line[2], line[3] };
         });
-        
+
         frame["detectedLines"] = linesCompat;
         
-        std::cout << regularFrame["progress"] << std::endl;
+        std::stringstream sOutputImagePath; sOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".png";
+        frame["detectedLinesImagePath"] = sOutputImagePath.str();
+        
+        struct stat pathInfo;
+        bool lineOutputDirExists = stat(outputFolderPath.c_str(), &pathInfo) == 0;
+        if(!lineOutputDirExists){
+            mkdir(outputFolderPath.c_str(), 0666);
+        }
+        
+        imwrite(sOutputImagePath.str(), linesImage);
         return frame;
     });
     
     milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
     std::cout << end_time.count() - start_time.count() << std::endl;
     
-    std::copy(extendedFrames.begin(), extendedFrames.end(), std::ostream_iterator<json>(cout, "\n"));
-    
-    for(json& regularFrame: regularFrames){
-        // grab the regular frame image (working directory is set to frame_data containing folder)
-        std::string path = regularFrame["imagePath"];
-        Mat image = imread(path);
-        
-        Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
-        Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-        Mat lineMask; Mat linesImage; std::vector<Vec4i> lines = lineSegmentDetectorTransform(image, lineMask, linesImage, lowerBound, upperBound);
-        //regularFrame["detectedLines"] = std::vector<int>{ 2 };
-    }
-    
-    std::cout << "Got here" << std::endl;
+    std::ofstream jsonOutput("frame_data_proc.json");
+    jsonOutput << std::setw(4) << (json)extendedFrames << std::endl;
+    //std::copy(extendedFrames.begin(), extendedFrames.end(), std::ostream_iterator<json>(cout, "\n"));
 }
 
 int main(int argc, const char * argv[]) {
