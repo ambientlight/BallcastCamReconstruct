@@ -16,6 +16,7 @@
 		1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A425E5120C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp */; };
 		1A42B73920C569BC00896F24 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A42B73820C569BC00896F24 /* main.cpp */; };
 		1A7C30FF20CEDFED0098474B /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A7C30FE20CEDFED0098474B /* AppKit.framework */; };
+		1A96622520E964BA0095D8B3 /* jsonSupport.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A96622320E964BA0095D8B3 /* jsonSupport.cpp */; };
 		1AB9BCD120D7DEDA009C4AE3 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AB9BCCC20D7DEDA009C4AE3 /* common.cpp */; };
 		1AB9BCD220D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AB9BCCE20D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp */; };
 		1ACC4E2520D95878007D4675 /* houghTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ACC4E2320D95878007D4675 /* houghTest.cpp */; };
@@ -51,6 +52,8 @@
 		1A42B73820C569BC00896F24 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		1A7C30FE20CEDFED0098474B /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		1A7C310020CEE18E0098474B /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		1A96622320E964BA0095D8B3 /* jsonSupport.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = jsonSupport.cpp; sourceTree = "<group>"; };
+		1A96622420E964BA0095D8B3 /* jsonSupport.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = jsonSupport.hpp; sourceTree = "<group>"; };
 		1AB9BCCC20D7DEDA009C4AE3 /* common.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = common.cpp; sourceTree = "<group>"; };
 		1AB9BCCD20D7DEDA009C4AE3 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		1AB9BCCE20D7DEDA009C4AE3 /* EllipseDetectorYaed.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EllipseDetectorYaed.cpp; sourceTree = "<group>"; };
@@ -116,6 +119,8 @@
 			children = (
 				1AB9BCCB20D7DEDA009C4AE3 /* fornaciari */,
 				1A42B73820C569BC00896F24 /* main.cpp */,
+				1A96622320E964BA0095D8B3 /* jsonSupport.cpp */,
+				1A96622420E964BA0095D8B3 /* jsonSupport.hpp */,
 				1AE8757320D01BD800155F1E /* opecvUtils.cpp */,
 				1AE8757420D01BD800155F1E /* opecvUtils.hpp */,
 				1AE8757020D0162A00155F1E /* ImageFilters.cpp */,
@@ -207,6 +212,7 @@
 				1AE8757520D01BD800155F1E /* opecvUtils.cpp in Sources */,
 				1A425E5220C857DB007E5778 /* ScreenCaptureSourceWrapper.cpp in Sources */,
 				1AB9BCD120D7DEDA009C4AE3 /* common.cpp in Sources */,
+				1A96622520E964BA0095D8B3 /* jsonSupport.cpp in Sources */,
 				1A42B73920C569BC00896F24 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -376,7 +382,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SYSTEM_HEADER_SEARCH_PATHS = /usr/local/Cellar/opencv/3.4.1_5/include;
+				SYSTEM_HEADER_SEARCH_PATHS = "/usr/local/Cellar/opencv/3.4.1_5/include /usr/local/Cellar/nlohmann_json/3.1.2/include";
 			};
 			name = Debug;
 		};
@@ -439,7 +445,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				SYSTEM_HEADER_SEARCH_PATHS = /usr/local/Cellar/opencv/3.4.1_5/include;
+				SYSTEM_HEADER_SEARCH_PATHS = "/usr/local/Cellar/opencv/3.4.1_5/include /usr/local/Cellar/nlohmann_json/3.1.2/include";
 			};
 			name = Release;
 		};

@@ -9,6 +9,8 @@
 #include <iostream>
 #include <chrono>
 #include <algorithm>
+#include <nlohmann/json.hpp>
+
 #include "ScreenCaptureSourceWrapper.h"
 
 #include "Semaphore.h"
@@ -21,15 +23,16 @@
 #endif
 
 #ifndef USING_SCREEN_CAPTURE
-#define USING_SCREEN_CAPTURE true
+#define USING_SCREEN_CAPTURE false
 #endif
 
 #ifndef CUSTOM_EXPORT_SESSION
-#define CUSTOM_EXPORT_SESSION false
+#define CUSTOM_EXPORT_SESSION true
 #endif
 
 using namespace cv;
 using namespace std::chrono;
+using json = nlohmann::json;
 
 Vec2d linearParameters(Vec4i line){
     Mat a = (Mat_<double>(2, 2) <<
@@ -117,7 +120,7 @@ bool extendedBoundingRectangleLineEquivalence(const Vec4i& _l1, const Vec4i& _l2
         pointPolygonTest(lineBoundingContour, cv::Point(el2[2], el2[3]), false) == 1;
 }
 
-void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
+std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
     Mat target = image.clone();
     Mat bgrImage; cvtColor(image, bgrImage, COLOR_BGRA2BGR);
     Mat hsvImage; cvtColor(bgrImage, hsvImage, COLOR_BGR2HSV);
@@ -149,23 +152,34 @@ void lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowe
         pointClouds[labels[i]].push_back(Point2i(detectedLine[2], detectedLine[3]));
     }
     
-    for(std::vector<Point2i> pointCloud: pointClouds){
-        Vec4f lineParams; fitLine(Mat(pointCloud), lineParams, CV_DIST_L2, 0, 0.01, 0.01);
+    // fit line to each equivalence class point cloud
+    std::vector<Vec4i> reducedLines = std::accumulate(pointClouds.begin(), pointClouds.end(), std::vector<Vec4i>{}, [&](std::vector<Vec4i> target, const std::vector<Point2i>& _pointCloud){
+        std::vector<Point2i> pointCloud = _pointCloud;
         
-        // derive the bounding box of point cloud
-        decltype(pointCloud)::iterator minXP, maxXP, minYP, maxYP;
+        //lineParams: [vx,vy, x0,y0]: (normalized vector, point on our contour)
+        // (x,y) = (x0,y0) + t*(vx,vy), t -> (-inf; inf)
+        Vec4f lineParams; fitLine(pointCloud, lineParams, CV_DIST_L2, 0, 0.01, 0.01);
+        
+        // derive the bounding xs of point cloud
+        decltype(pointCloud)::iterator minXP, maxXP;
         std::tie(minXP, maxXP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.x < p2.x; });
-        std::tie(minYP, maxYP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.y < p2.y; });
-    
+        
         // derive y coords of fitted line
         float m = lineParams[1] / lineParams[0];
         int y1 = ((minXP->x - lineParams[2]) * m) + lineParams[3];
         int y2 = ((maxXP->x - lineParams[2]) * m) + lineParams[3];
-        cv::line(clearTarget, Point(maxXP->x, y2), Point(minXP->x, y1), Scalar(255, 255, 255), 1);
+        
+        target.push_back(Vec4i(minXP->x, y1, maxXP->x, y2));
+        return target;
+    });
+    
+    for(Vec4i reduced: reducedLines){
+        line(clearTarget, Point(reduced[0], reduced[1]), Point(reduced[2], reduced[3]), Scalar(255, 255, 255), 1);
     }
     
     mask = grassOnlyFrameImage;
     output = clearTarget;
+    return reducedLines;
 }
 
 void lineFilterHoughPFornaciariEllipse(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound, bool sharpen = false, bool dilate = false){
@@ -301,7 +315,56 @@ void performTransformFromLoadedImage(const String& filename){
 }
 
 void performCustomExportSession(const String& folderPath){
-    vector<String> matchedFilenames; glob(folderPath + "/*.png", matchedFilenames);
+    //vector<String> matchedFilenames; glob(folderPath + "/*.png", matchedFilenames);
+    //std::copy(matchedFilenames.begin(), matchedFilenames.end(), std::ostream_iterator<String>(cout, "\n"));
+    
+    std::ifstream jsonInput("frame_data.json");
+    json frameData; jsonInput >> frameData;
+
+    std::cout << "Frames(all): " << frameData.size() << std::endl;
+    std::vector<json> regularFrames; std::copy_if(frameData.begin(), frameData.end(), std::back_inserter(regularFrames), [](const json& element){
+        return element["type"] == "regular";
+    });
+    
+    milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    
+    std::cout << "Frames(regular): " << regularFrames.size() << std::endl;
+    std::vector<json> extendedFrames; std::transform(regularFrames.begin(), regularFrames.end(), std::back_inserter(extendedFrames), [](const json& regularFrame){
+        json frame = regularFrame;
+        
+        std::string path = regularFrame["imagePath"];
+        Mat image = imread(path);
+
+        Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
+        Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+        Mat lineMask; Mat linesImage; std::vector<Vec4i> lines = lineSegmentDetectorTransform(image, lineMask, linesImage, lowerBound, upperBound);
+        std::vector<std::vector<int>> linesCompat; std::transform(lines.begin(), lines.end(), std::back_inserter(linesCompat), [](const Vec4i& line){
+            return std::vector<int>{ line[0], line[1], line[2], line[3] };
+        });
+        
+        frame["detectedLines"] = linesCompat;
+        
+        std::cout << regularFrame["progress"] << std::endl;
+        return frame;
+    });
+    
+    milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+    std::cout << end_time.count() - start_time.count() << std::endl;
+    
+    std::copy(extendedFrames.begin(), extendedFrames.end(), std::ostream_iterator<json>(cout, "\n"));
+    
+    for(json& regularFrame: regularFrames){
+        // grab the regular frame image (working directory is set to frame_data containing folder)
+        std::string path = regularFrame["imagePath"];
+        Mat image = imread(path);
+        
+        Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
+        Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+        Mat lineMask; Mat linesImage; std::vector<Vec4i> lines = lineSegmentDetectorTransform(image, lineMask, linesImage, lowerBound, upperBound);
+        //regularFrame["detectedLines"] = std::vector<int>{ 2 };
+    }
+    
+    std::cout << "Got here" << std::endl;
 }
 
 int main(int argc, const char * argv[]) {
@@ -322,6 +385,8 @@ int main(int argc, const char * argv[]) {
     #else
         performTransformFromLoadedImage(argv[1]);
     #endif
+    
+    return 0;
 }
 
 
