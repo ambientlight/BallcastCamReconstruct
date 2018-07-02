@@ -137,7 +137,7 @@ std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& outpu
     std::copy_if (lines.begin(), lines.end(), std::back_inserter(linesWithoutSmall), [](Vec4f line){
         float length = sqrtf((line[2] - line[0]) * (line[2] - line[0])
                            + (line[3] - line[1]) * (line[3] - line[1]));
-        return length > 30;
+        return length > 45;
     });
     
     std::vector<int> labels;
@@ -357,11 +357,20 @@ void performCustomExportSession(const std::string& outputFolderPath){
         return frame;
     });
     
+    std::vector<int> lineCounts; std::transform(extendedFrames.begin(), extendedFrames.end(), std::back_inserter(lineCounts), [](const json& frame){
+        std::vector<std::vector<int>> detectedLines = frame["detectedLines"].get<std::vector<std::vector<int>>>();
+        return detectedLines.size();
+    });
+    
+    float averageLines = accumulate(lineCounts.begin(), lineCounts.end(), 0.0) / lineCounts.size();
+    std::cout << "Average line count: " << averageLines << std::endl;
+    std::cout << "Max lines: " << *max_element(lineCounts.begin(), lineCounts.end()) << std::endl;
+    
     milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    std::cout << end_time.count() - start_time.count() << std::endl;
+    std::cout << end_time.count() - start_time.count() << "ms" << std::endl;
     
     std::ofstream jsonOutput("frame_data_proc.json");
-    jsonOutput << std::setw(4) << (json)extendedFrames << std::endl;
+    jsonOutput << (json)extendedFrames << std::endl;
     //std::copy(extendedFrames.begin(), extendedFrames.end(), std::ostream_iterator<json>(cout, "\n"));
 }
 
