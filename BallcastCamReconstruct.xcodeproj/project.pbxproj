@@ -42,6 +42,7 @@
 		1A2D883420C97A060084740E /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
 		1A2D883620C97D230084740E /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		1A2D883920C999A30084740E /* Semaphore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Semaphore.h; sourceTree = "<group>"; };
+		1A3FBB3220EBA8AF00A94198 /* cxxopts.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = cxxopts.hpp; sourceTree = "<group>"; };
 		1A425E4A20C8457F007E5778 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		1A425E4C20C846BE007E5778 /* ScreenCaptureSource.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ScreenCaptureSource.mm; sourceTree = "<group>"; };
 		1A425E4E20C847E4007E5778 /* ScreenCaptureSource.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScreenCaptureSource.h; sourceTree = "<group>"; };
@@ -119,6 +120,7 @@
 			children = (
 				1AB9BCCB20D7DEDA009C4AE3 /* fornaciari */,
 				1A42B73820C569BC00896F24 /* main.cpp */,
+				1A3FBB3220EBA8AF00A94198 /* cxxopts.hpp */,
 				1A96622320E964BA0095D8B3 /* jsonSupport.cpp */,
 				1A96622420E964BA0095D8B3 /* jsonSupport.hpp */,
 				1AE8757320D01BD800155F1E /* opecvUtils.cpp */,

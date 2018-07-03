@@ -66,11 +66,15 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "test_frames/00.png"
+            argument = "-o line_frames"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "line_frames"
+            argument = "-i frame_data.json"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-l 0.1 -a 3.0 -w 5.0"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

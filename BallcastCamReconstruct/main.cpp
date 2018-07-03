@@ -13,24 +13,13 @@
 #include <sys/stat.h>
 
 #include <nlohmann/json.hpp>
+#include "cxxopts.hpp"
+#include "EllipseDetectorYaed.h"
 
 #include "ScreenCaptureSourceWrapper.h"
 #include "Semaphore.h"
 #include "opecvUtils.hpp"
 #include "ImageFilters.hpp"
-#include "EllipseDetectorYaed.h"
-
-#ifndef ENABLE_LSD_TRANSFORM
-#define ENABLE_LSD_TRANSFORM true
-#endif
-
-#ifndef USING_SCREEN_CAPTURE
-#define USING_SCREEN_CAPTURE false
-#endif
-
-#ifndef CUSTOM_EXPORT_SESSION
-#define CUSTOM_EXPORT_SESSION true
-#endif
 
 using namespace cv;
 using namespace std::chrono;
@@ -122,7 +111,7 @@ bool extendedBoundingRectangleLineEquivalence(const Vec4i& _l1, const Vec4i& _l2
         pointPolygonTest(lineBoundingContour, cv::Point(el2[2], el2[3]), false) == 1;
 }
 
-std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound){
+std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound, cxxopts::ParseResult parsedResults){
     Mat target = image.clone();
     Mat bgrImage; cvtColor(image, bgrImage, COLOR_BGRA2BGR);
     Mat hsvImage; cvtColor(bgrImage, hsvImage, COLOR_BGR2HSV);
@@ -140,9 +129,13 @@ std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& outpu
         return length > 45;
     });
     
+    float lineExtension = parsedResults["l"].count() > 0 ? parsedResults["l"].as<float>() : 0.2;
+    float angleDiff = parsedResults["a"].count() > 0 ? parsedResults["a"].as<float>() : 4.0;
+    float windowSize = parsedResults["w"].count() > 0 ? parsedResults["w"].as<float>() : 10.0;
+    
     std::vector<int> labels;
-    int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, [](const Vec4i l1, const Vec4i l2){
-        return extendedBoundingRectangleLineEquivalence(l1, l2, 0.5, 4.0, 10);
+    int equilavenceClassesCount = cv::partition(linesWithoutSmall, labels, [=](const Vec4i l1, const Vec4i l2){
+        return extendedBoundingRectangleLineEquivalence(l1, l2, lineExtension, angleDiff, windowSize);
     });
     
     Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
@@ -255,7 +248,7 @@ void lineFilterHoughPFornaciariEllipse(Mat image, Mat& mask, Mat& output, Scalar
     output = target;
 }
 
-void performTransformFromScreenCapture(){
+void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore();
     source.init(semaphor);
@@ -272,15 +265,16 @@ void performTransformFromScreenCapture(){
         Mat image = Mat((int)source.bufferHeight(imageBuffer), (int)source.bufferWidth(imageBuffer), CV_8UC4, buffer);
         Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
         
-        #if ENABLE_LSD_TRANSFORM
+        bool usesExperimentalTransform = parsedResults["e"].count() > 0;
+        if(!usesExperimentalTransform){
             Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
             Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-            Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
-        #else
+            Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound, parsedResults);
+        } else {
             Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
             Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
             Mat lineMask; lineFilterHoughPFornaciariEllipse(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
-        #endif
+        }
         
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         std::cout << end_time.count() - start_time.count() << std::endl;
@@ -297,30 +291,34 @@ void performTransformFromScreenCapture(){
     delete semaphor;
 }
 
-void performTransformFromLoadedImage(const String& filename){
+void performTransformFromLoadedImage(cxxopts::ParseResult parsedResults){
+    std::string filename = parsedResults["i"].as<std::string>();
+    
     Mat image = imread(filename);
     Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
     
-    #if ENABLE_LSD_TRANSFORM
+    bool usesExperimentalTransform = parsedResults["e"].count() > 0;
+    if(!usesExperimentalTransform){
         Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
         Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-        Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
-    #else
+        Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound, parsedResults);
+    } else {
         Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
         Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
         Mat lineMask; lineFilterHoughPFornaciariEllipse(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
-    #endif
+    }
     
     //imshow("Line Mask", lineMask);
     imshow("Detected Lines", smallerImage);
     waitKey();
 }
 
-void performCustomExportSession(const std::string& outputFolderPath){
+void performCustomExportSession(cxxopts::ParseResult parsedResults){
     //vector<String> matchedFilenames; glob(folderPath + "/*.png", matchedFilenames);
     //std::copy(matchedFilenames.begin(), matchedFilenames.end(), std::ostream_iterator<String>(cout, "\n"));
+    std::string outputFolderPath = parsedResults["o"].as<std::string>();
     
-    std::ifstream jsonInput("frame_data.json");
+    std::ifstream jsonInput(parsedResults["i"].count() > 0 ? parsedResults["i"].as<std::string>() : "frame_data.json");
     json frameData; jsonInput >> frameData;
 
     milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
@@ -337,7 +335,7 @@ void performCustomExportSession(const std::string& outputFolderPath){
 
         Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
         Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-        Mat lineMask; Mat linesImage; std::vector<Vec4i> lines = lineSegmentDetectorTransform(image, lineMask, linesImage, lowerBound, upperBound);
+        Mat lineMask; Mat linesImage; std::vector<Vec4i> lines = lineSegmentDetectorTransform(image, lineMask, linesImage, lowerBound, upperBound, parsedResults);
         std::vector<std::vector<int>> linesCompat; std::transform(lines.begin(), lines.end(), std::back_inserter(linesCompat), [](const Vec4i& line){
             return std::vector<int>{ line[0], line[1], line[2], line[3] };
         });
@@ -374,24 +372,28 @@ void performCustomExportSession(const std::string& outputFolderPath){
     //std::copy(extendedFrames.begin(), extendedFrames.end(), std::ostream_iterator<json>(cout, "\n"));
 }
 
-int main(int argc, const char * argv[]) {
-    namedWindow("Line Mask", WINDOW_NORMAL);
-    namedWindow("Detected Lines", WINDOW_NORMAL);
+int main(int argc, char* argv[]) {
+    cxxopts::Options options("ballcast-cmd", "Ballcast command line tools.");
+    options.add_options()
+        ("s,scapt", "Enable screen capture mode")
+        ("e,expiremental", "Enable expiremental line detection")
+        ("i,input", "Input filename - enables single transform when specified, when specified together with -o, seves as frame input filename", cxxopts::value<std::string>())
+        ("o,output", "Output directory - uses -i or frame_data.json to transform each frame image and store in output dir", cxxopts::value<std::string>())
+        ("l,line_ext", "Line Extension Fraction", cxxopts::value<float>())
+        ("a,angle_diff", "Maximum angle diff for equivalence class", cxxopts::value<float>())
+        ("w,window_size", "Bounding window: distance from line to border", cxxopts::value<float>());
+    cxxopts::ParseResult parsedOptions = options.parse(argc, argv);
     
-    if(argc < 3){
-        std::cout << "Expected file name and frames folder passed" << std::endl;
+    if(parsedOptions.count("i") > 0 && parsedOptions.count("o") == 0){
+        performTransformFromLoadedImage(parsedOptions);
+    } else if(parsedOptions.count("o") > 0){
+        performCustomExportSession(parsedOptions);
+    } else if(parsedOptions.count("s") > 0){
+        performTransformFromScreenCapture(parsedOptions);
+    } else {
+        std::cerr << "At least one of -i -o -s needs to be specified" << std::endl << std::endl;
+        std::cout << options.help() << std::endl;
     }
-
-    Vec4i line = Vec4i(1956, 452, 1235, 435);
-    linearParameters(line);
-    
-    #if CUSTOM_EXPORT_SESSION
-        performCustomExportSession(argv[2]);
-    #elif USING_SCREEN_CAPTURE
-        performTransformFromScreenCapture();
-    #else
-        performTransformFromLoadedImage(argv[1]);
-    #endif
     
     return 0;
 }
