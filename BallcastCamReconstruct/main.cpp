@@ -111,7 +111,7 @@ bool extendedBoundingRectangleLineEquivalence(const Vec4i& _l1, const Vec4i& _l2
         pointPolygonTest(lineBoundingContour, cv::Point(el2[2], el2[3]), false) == 1;
 }
 
-std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound, cxxopts::ParseResult parsedResults){
+std::pair<std::vector<Vec4i>, std::vector<Vec4i>> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound, cxxopts::ParseResult parsedResults){
     Mat target = image.clone();
     Mat bgrImage; cvtColor(image, bgrImage, COLOR_BGRA2BGR);
     Mat hsvImage; cvtColor(bgrImage, hsvImage, COLOR_BGR2HSV);
@@ -126,7 +126,8 @@ std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& outpu
     std::copy_if (lines.begin(), lines.end(), std::back_inserter(linesWithoutSmall), [](Vec4f line){
         float length = sqrtf((line[2] - line[0]) * (line[2] - line[0])
                            + (line[3] - line[1]) * (line[3] - line[1]));
-        return length > 45;
+        float angle = atan(linearParameters(line)[0]) * 180.0 / M_PI;
+        return length > 40 && fabs(angle) > 0.1;
     });
     
     float lineExtension = parsedResults["l"].count() > 0 ? parsedResults["l"].as<float>() : 0.2;
@@ -138,7 +139,26 @@ std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& outpu
         return extendedBoundingRectangleLineEquivalence(l1, l2, lineExtension, angleDiff, windowSize);
     });
     
-    Mat clearTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
+    // grab a random colour for each equivalence class
+    /*
+    RNG rng(215526);
+    std::vector<Scalar> colors(equilavenceClassesCount);
+    for (int i = 0; i < equilavenceClassesCount; i++){
+        colors[i] = Scalar(rng.uniform(30,255), rng.uniform(30, 255), rng.uniform(30, 255));;
+    }
+    */
+    
+    Mat detectedTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
+    Mat reducedTarget = Mat::zeros(image.rows, image.cols, CV_8UC3);
+    
+    // draw original detected lines
+    for (int i = 0; i < linesWithoutSmall.size(); i++){
+        Vec4i& detectedLine = linesWithoutSmall[i];
+        line(detectedTarget,
+             cv::Point(detectedLine[0], detectedLine[1]),
+             cv::Point(detectedLine[2], detectedLine[3]), Scalar(255, 255, 255), 1);
+    }
+    
     // point cloud out of each equivalence classes
     std::vector<std::vector<Point2i>> pointClouds(equilavenceClassesCount);
     for (int i = 0; i < linesWithoutSmall.size(); i++){
@@ -153,28 +173,33 @@ std::vector<Vec4i> lineSegmentDetectorTransform(Mat image, Mat& mask, Mat& outpu
         
         //lineParams: [vx,vy, x0,y0]: (normalized vector, point on our contour)
         // (x,y) = (x0,y0) + t*(vx,vy), t -> (-inf; inf)
-        Vec4f lineParams; fitLine(pointCloud, lineParams, CV_DIST_L2, 0, 0.01, 0.01);
+        Vec4d lineParams; fitLine(pointCloud, lineParams, CV_DIST_L2, 0, 0.01, 0.01);
         
         // derive the bounding xs of point cloud
-        decltype(pointCloud)::iterator minXP, maxXP;
+        decltype(pointCloud)::iterator minXP, maxXP, minYP, maxYP;
         std::tie(minXP, maxXP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.x < p2.x; });
+        std::tie(minYP, maxYP) = std::minmax_element(pointCloud.begin(), pointCloud.end(), [](const Point2i& p1, const Point2i& p2){ return p1.y < p2.y; });
         
         // derive y coords of fitted line
-        float m = lineParams[1] / lineParams[0];
+        double m = lineParams[1] / lineParams[0];
         int y1 = ((minXP->x - lineParams[2]) * m) + lineParams[3];
         int y2 = ((maxXP->x - lineParams[2]) * m) + lineParams[3];
+        if(y1 < minYP->y){ y1 = minYP->y; }
+        if(y1 > maxYP->y){ y1 = maxYP->y; }
+        if(y2 < minYP->y){ y2 = minYP->y; }
+        if(y2 > maxYP->y){ y2 = maxYP->y; }
         
         target.push_back(Vec4i(minXP->x, y1, maxXP->x, y2));
         return target;
     });
     
     for(Vec4i reduced: reducedLines){
-        line(clearTarget, Point(reduced[0], reduced[1]), Point(reduced[2], reduced[3]), Scalar(255, 255, 255), 1);
+        line(reducedTarget, Point(reduced[0], reduced[1]), Point(reduced[2], reduced[3]), Scalar(255, 255, 255), 1);
     }
     
-    mask = grassOnlyFrameImage;
-    output = clearTarget;
-    return reducedLines;
+    mask = detectedTarget;
+    output = reducedTarget;
+    return std::make_pair(reducedLines, linesWithoutSmall);
 }
 
 void lineFilterHoughPFornaciariEllipse(Mat image, Mat& mask, Mat& output, Scalar lowerBound, Scalar upperBound, bool sharpen = false, bool dilate = false){
@@ -295,7 +320,8 @@ void performTransformFromLoadedImage(cxxopts::ParseResult parsedResults){
     std::string filename = parsedResults["i"].as<std::string>();
     
     Mat image = imread(filename);
-    Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+    //Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
+    Mat smallerImage = image;
     
     bool usesExperimentalTransform = parsedResults["e"].count() > 0;
     if(!usesExperimentalTransform){
@@ -335,15 +361,25 @@ void performCustomExportSession(cxxopts::ParseResult parsedResults){
 
         Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
         Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-        Mat lineMask; Mat linesImage; std::vector<Vec4i> lines = lineSegmentDetectorTransform(image, lineMask, linesImage, lowerBound, upperBound, parsedResults);
-        std::vector<std::vector<int>> linesCompat; std::transform(lines.begin(), lines.end(), std::back_inserter(linesCompat), [](const Vec4i& line){
+        
+        Mat detectedLinesImage; Mat reducedLinesImage;
+        std::vector<Vec4i> detectedLines; std::vector<Vec4i> reducedLines;
+        std::tie(detectedLines, reducedLines) = lineSegmentDetectorTransform(image, detectedLinesImage, reducedLinesImage, lowerBound, upperBound, parsedResults);
+        
+        std::vector<std::vector<int>> reducedLinesCompat; std::transform(reducedLines.begin(), reducedLines.end(), std::back_inserter(reducedLinesCompat), [](const Vec4i& line){
+            return std::vector<int>{ line[0], line[1], line[2], line[3] };
+        });
+        std::vector<std::vector<int>> detectedLinesCompat; std::transform(detectedLines.begin(), detectedLines.end(), std::back_inserter(detectedLinesCompat), [](const Vec4i& line){
             return std::vector<int>{ line[0], line[1], line[2], line[3] };
         });
 
-        frame["detectedLines"] = linesCompat;
+        frame["detectedLines"] = detectedLinesCompat;
+        frame["reducedLines"] = reducedLinesCompat;
         
-        std::stringstream sOutputImagePath; sOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".png";
-        frame["detectedLinesImagePath"] = sOutputImagePath.str();
+        std::stringstream sDetectedOutputImagePath; sDetectedOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".detected.png";
+        std::stringstream sReducedOutputImagePath; sReducedOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".reduced.png";
+        frame["detectedLinesImagePath"] = sDetectedOutputImagePath.str();
+        frame["reducedLinesImagePath"] = sReducedOutputImagePath.str();
         
         struct stat pathInfo;
         bool lineOutputDirExists = stat(outputFolderPath.c_str(), &pathInfo) == 0;
@@ -351,7 +387,8 @@ void performCustomExportSession(cxxopts::ParseResult parsedResults){
             mkdir(outputFolderPath.c_str(), 0666);
         }
         
-        imwrite(sOutputImagePath.str(), linesImage);
+        imwrite(sDetectedOutputImagePath.str(), detectedLinesImage);
+        imwrite(sReducedOutputImagePath.str(), reducedLinesImage);
         return frame;
     });
     
