@@ -28,6 +28,10 @@ public:
         count--;
     }
     
+    inline bool wouldWait(){
+        return count == 0;
+    }
+    
 private:
     std::mutex mtx;
     std::condition_variable cv;

@@ -21,6 +21,7 @@ public:
     void init(Semaphore*);
     bool isEnabled() const;
     void* lastFrameBuffer() const;
+    void setShouldGetNextFrame(bool shouldGetNextFrame);
 
     void lockBaseAddress(void* imageBuffer) const;
     unsigned char* getBaseAddress(void* imageBuffer) const;

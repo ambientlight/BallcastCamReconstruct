@@ -33,6 +33,12 @@ void* ScreenCaptureSourceWrapper::lastFrameBuffer() const {
     return _impl != nullptr ? _impl->lastFrameBuffer() : nullptr;
 }
 
+void ScreenCaptureSourceWrapper::setShouldGetNextFrame(bool shouldGetNextFrame) {
+    if(_impl){
+        _impl->setShouldGetNextFrame(shouldGetNextFrame);
+    }
+}
+
 void ScreenCaptureSourceWrapper::lockBaseAddress(void* imageBuffer) const {
     CVPixelBufferLockBaseAddress((CVPixelBufferRef)imageBuffer, kCVPixelBufferLock_ReadOnly);
 }

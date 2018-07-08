@@ -275,15 +275,17 @@ void lineFilterHoughPFornaciariEllipse(Mat image, Mat& mask, Mat& output, Scalar
 
 void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
     bool shouldDumpToStdout = parsedResults["d"].count() > 0;
+    bool shouldPassthrough = parsedResults["p"].count() > 0;
     
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
-    Semaphore* semaphor = new Semaphore();
+    Semaphore* semaphor = new Semaphore(0);
     source.init(semaphor);
+    source.setShouldGetNextFrame(true);
     
     while(source.isEnabled()){
         semaphor->wait();
         
-        milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        //milliseconds start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
         
         void* imageBuffer = source.lastFrameBuffer();
         source.lockBaseAddress(imageBuffer);
@@ -292,21 +294,24 @@ void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
         Mat image = Mat((int)source.bufferHeight(imageBuffer), (int)source.bufferWidth(imageBuffer), CV_8UC4, buffer);
         Mat smallerImage; resize(image, smallerImage, cv::Size(), 0.5, 0.5, INTER_CUBIC);
         
-        bool usesExperimentalTransform = parsedResults["e"].count() > 0;
-        if(!usesExperimentalTransform){
-            Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
-            Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-            Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound, parsedResults);
-        } else {
-            Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
-            Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
-            Mat lineMask; lineFilterHoughPFornaciariEllipse(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
+        if(!shouldPassthrough){
+            bool usesExperimentalTransform = parsedResults["e"].count() > 0;
+            if(!usesExperimentalTransform){
+                Scalar lowerBound = Scalar((75 * 180/360) - 1, (0 * 256) - 1, (0 * 256) - 1, 0);
+                Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+                Mat lineMask; lineSegmentDetectorTransform(smallerImage, lineMask, smallerImage, lowerBound, upperBound, parsedResults);
+            } else {
+                Scalar lowerBound = Scalar((50 * 180/360) - 1, (0.45 * 256) - 1, (0.15 * 256) - 1, 0);
+                Scalar upperBound = Scalar((150 * 180/360) - 1, (1 * 256) - 1, (1 * 256) - 1, 1);
+                Mat lineMask; lineFilterHoughPFornaciariEllipse(smallerImage, lineMask, smallerImage, lowerBound, upperBound);
+            }
         }
         
-        milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-
+        //milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        //std::cout << end_time.count() - start_time.count() << std::endl;
+        
         if(!shouldDumpToStdout){
-            std::cout << end_time.count() - start_time.count() << std::endl;
+            //std::cout << smallerImage.rows << " " << smallerImage.cols << " " << smallerImage.channels() << std::endl;
             
             //imshow("Line Mask", lineMask);
             imshow("Detected Lines", smallerImage);
@@ -315,11 +320,14 @@ void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
                 break;
         } else {
             Mat targetImage; cvtColor(smallerImage, targetImage, CV_BGR2RGBA);
+            //std::cout << targetImage.rows << " " << targetImage.cols << " " << targetImage.channels() << std::endl;
+            
             fwrite(targetImage.data, sizeof(targetImage.data), targetImage.rows * targetImage.cols * targetImage.channels(), stdout);
             fflush(stdout);
         }
         
         source.unlockAndRelease(imageBuffer);
+        source.setShouldGetNextFrame(true);
     }
     
     delete semaphor;
@@ -438,6 +446,7 @@ int main(int argc, char* argv[]) {
     options.add_options()
         ("s,scapt", "Enable screen capture mode")
         ("d,dump", "When -s specified dumps screen capture to stdout")
+        ("p,passthrough", "When -s is used just outputs the captured image and doesn't apply any transform to it")
         ("e,expiremental", "Enable expiremental line detection")
         ("i,input", "Input filename - enables single transform when specified, when specified together with -o, seves as frame input filename", cxxopts::value<std::string>())
         ("o,output", "Output directory - uses -i or frame_data.json to transform each frame image and store in output dir", cxxopts::value<std::string>())

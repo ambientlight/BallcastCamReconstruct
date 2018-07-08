@@ -20,6 +20,8 @@ public:
     void init(Semaphore*);
     bool isEnabled() const;
     CVImageBufferRef lastFrameBuffer() const;
+    
+    void setShouldGetNextFrame(bool shouldGetNextFrame);
 
 private:
     void* self;

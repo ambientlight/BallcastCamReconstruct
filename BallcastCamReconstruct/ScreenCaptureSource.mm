@@ -22,6 +22,7 @@
 @property(nonatomic, unsafe_unretained) CVImageBufferRef lastFrameBuffer;
 
 @property(nonatomic) BOOL complete;
+@property(nonatomic) BOOL shouldGetNextFrame;
 
 @end
 
@@ -36,6 +37,12 @@ ScreenCaptureSourceImpl::~ScreenCaptureSourceImpl(void) {
 
 void ScreenCaptureSourceImpl::init(Semaphore* semaphore) {
     self = [[ScreenCaptureSource alloc] initWithSemaphore:semaphore];
+}
+
+void ScreenCaptureSourceImpl::setShouldGetNextFrame(bool shouldGetNextFrame) {
+    if(self){
+        [(__bridge id)self setShouldGetNextFrame:shouldGetNextFrame];
+    }
 }
 
 bool ScreenCaptureSourceImpl::isEnabled() const {
@@ -56,7 +63,7 @@ CVImageBufferRef ScreenCaptureSourceImpl::lastFrameBuffer() const {
         NSArray<NSScreen *>* screens = [NSScreen screens];
         NSScreen* targetScreen = [NSScreen mainScreen];
         if(screens.count > 1){
-            NSLog(@"Multiple screens available, selecting first non-main one");
+            //NSLog(@"Multiple screens available, selecting first non-main one");
             for (NSScreen* screen in screens) {
                 if([screen isEqual:[NSScreen mainScreen]]){
                     continue;
@@ -133,9 +140,17 @@ CVImageBufferRef ScreenCaptureSourceImpl::lastFrameBuffer() const {
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
     
+    // if main thread is processing the frame drop it
+    if(!self.shouldGetNextFrame){
+        //NSLog(@"Drop frame");
+        return;
+    }
+    
     CVPixelBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     CVPixelBufferRetain(imageBuffer);
     self.lastFrameBuffer = imageBuffer;
+    
+    self.shouldGetNextFrame = false;
     self.semaphore->notify();
 }
 

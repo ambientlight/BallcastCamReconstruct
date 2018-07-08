@@ -74,7 +74,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-s -l 0.2 -a 2.5 -w 10.0"
+            argument = "-s -p -l 0.2 -a 2.5 -w 10.0"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
