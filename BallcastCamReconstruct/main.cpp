@@ -127,7 +127,7 @@ std::pair<std::vector<Vec4i>, std::vector<Vec4i>> lineSegmentDetectorTransform(M
         float length = sqrtf((line[2] - line[0]) * (line[2] - line[0])
                            + (line[3] - line[1]) * (line[3] - line[1]));
         float angle = atan(linearParameters(line)[0]) * 180.0 / M_PI;
-        return length > 40 && fabs(angle) > 0.1;
+        return length > 50 && fabs(angle) > 0.1;
     });
     
     float lineExtension = parsedResults["l"].count() > 0 ? parsedResults["l"].as<float>() : 0.2;
@@ -274,6 +274,8 @@ void lineFilterHoughPFornaciariEllipse(Mat image, Mat& mask, Mat& output, Scalar
 }
 
 void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
+    bool shouldDumpToStdout = parsedResults["d"].count() > 0;
+    
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore();
     source.init(semaphor);
@@ -302,13 +304,20 @@ void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
         }
         
         milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        std::cout << end_time.count() - start_time.count() << std::endl;
-        
-        //imshow("Line Mask", lineMask);
-        imshow("Detected Lines", smallerImage);
-        char c = (char)waitKey(1);
-        if(c == 27)
-            break;
+
+        if(!shouldDumpToStdout){
+            std::cout << end_time.count() - start_time.count() << std::endl;
+            
+            //imshow("Line Mask", lineMask);
+            imshow("Detected Lines", smallerImage);
+            char c = (char)waitKey(1);
+            if(c == 27)
+                break;
+        } else {
+            Mat targetImage; cvtColor(smallerImage, targetImage, CV_BGR2RGBA);
+            fwrite(targetImage.data, sizeof(targetImage.data), targetImage.rows * targetImage.cols * targetImage.channels(), stdout);
+            fflush(stdout);
+        }
         
         source.unlockAndRelease(imageBuffer);
     }
@@ -343,6 +352,7 @@ void performCustomExportSession(cxxopts::ParseResult parsedResults){
     //vector<String> matchedFilenames; glob(folderPath + "/*.png", matchedFilenames);
     //std::copy(matchedFilenames.begin(), matchedFilenames.end(), std::ostream_iterator<String>(cout, "\n"));
     std::string outputFolderPath = parsedResults["o"].as<std::string>();
+    bool experimentalLineDetectionUsed = parsedResults["e"].count() > 0;
     
     std::ifstream jsonInput(parsedResults["i"].count() > 0 ? parsedResults["i"].as<std::string>() : "frame_data.json");
     json frameData; jsonInput >> frameData;
@@ -364,45 +374,59 @@ void performCustomExportSession(cxxopts::ParseResult parsedResults){
         
         Mat detectedLinesImage; Mat reducedLinesImage;
         std::vector<Vec4i> detectedLines; std::vector<Vec4i> reducedLines;
-        std::tie(detectedLines, reducedLines) = lineSegmentDetectorTransform(image, detectedLinesImage, reducedLinesImage, lowerBound, upperBound, parsedResults);
         
-        std::vector<std::vector<int>> reducedLinesCompat; std::transform(reducedLines.begin(), reducedLines.end(), std::back_inserter(reducedLinesCompat), [](const Vec4i& line){
-            return std::vector<int>{ line[0], line[1], line[2], line[3] };
-        });
-        std::vector<std::vector<int>> detectedLinesCompat; std::transform(detectedLines.begin(), detectedLines.end(), std::back_inserter(detectedLinesCompat), [](const Vec4i& line){
-            return std::vector<int>{ line[0], line[1], line[2], line[3] };
-        });
-
-        frame["detectedLines"] = detectedLinesCompat;
-        frame["reducedLines"] = reducedLinesCompat;
-        
-        std::stringstream sDetectedOutputImagePath; sDetectedOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".detected.png";
-        std::stringstream sReducedOutputImagePath; sReducedOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".reduced.png";
-        frame["detectedLinesImagePath"] = sDetectedOutputImagePath.str();
-        frame["reducedLinesImagePath"] = sReducedOutputImagePath.str();
-        
+        // create the output dir if it doesn't exists
         struct stat pathInfo;
         bool lineOutputDirExists = stat(outputFolderPath.c_str(), &pathInfo) == 0;
         if(!lineOutputDirExists){
             mkdir(outputFolderPath.c_str(), 0666);
         }
         
-        imwrite(sDetectedOutputImagePath.str(), detectedLinesImage);
-        imwrite(sReducedOutputImagePath.str(), reducedLinesImage);
+        if(experimentalLineDetectionUsed){
+            // detected lines here store the mask
+            lineFilterHoughPFornaciariEllipse(image, detectedLinesImage, reducedLinesImage, lowerBound, upperBound);
+            std::stringstream sMaskImagePath; sMaskImagePath << outputFolderPath << "/" << frame["progress"] << ".mask.png";
+            frame["maskImagePath"] = sMaskImagePath.str();
+            imwrite(sMaskImagePath.str(), detectedLinesImage);
+            
+        } else {
+            std::tie(detectedLines, reducedLines) = lineSegmentDetectorTransform(image, detectedLinesImage, reducedLinesImage, lowerBound, upperBound, parsedResults);
+            
+            std::vector<std::vector<int>> reducedLinesCompat; std::transform(reducedLines.begin(), reducedLines.end(), std::back_inserter(reducedLinesCompat), [](const Vec4i& line){
+                return std::vector<int>{ line[0], line[1], line[2], line[3] };
+            });
+            std::vector<std::vector<int>> detectedLinesCompat; std::transform(detectedLines.begin(), detectedLines.end(), std::back_inserter(detectedLinesCompat), [](const Vec4i& line){
+                return std::vector<int>{ line[0], line[1], line[2], line[3] };
+            });
+            
+            frame["detectedLines"] = detectedLinesCompat;
+            frame["reducedLines"] = reducedLinesCompat;
+            
+            std::stringstream sDetectedOutputImagePath; sDetectedOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".detected.png";
+            std::stringstream sReducedOutputImagePath; sReducedOutputImagePath << outputFolderPath << "/" << frame["progress"] << ".reduced.png";
+            frame["detectedLinesImagePath"] = sDetectedOutputImagePath.str();
+            frame["reducedLinesImagePath"] = sReducedOutputImagePath.str();
+            
+            imwrite(sDetectedOutputImagePath.str(), detectedLinesImage);
+            imwrite(sReducedOutputImagePath.str(), reducedLinesImage);
+        }
+        
         return frame;
     });
     
-    std::vector<int> lineCounts; std::transform(extendedFrames.begin(), extendedFrames.end(), std::back_inserter(lineCounts), [](const json& frame){
-        std::vector<std::vector<int>> detectedLines = frame["detectedLines"].get<std::vector<std::vector<int>>>();
-        return detectedLines.size();
-    });
-    
-    float averageLines = accumulate(lineCounts.begin(), lineCounts.end(), 0.0) / lineCounts.size();
-    std::cout << "Average line count: " << averageLines << std::endl;
-    std::cout << "Max lines: " << *max_element(lineCounts.begin(), lineCounts.end()) << std::endl;
-    
-    milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-    std::cout << end_time.count() - start_time.count() << "ms" << std::endl;
+    if(!experimentalLineDetectionUsed){
+        std::vector<int> lineCounts; std::transform(extendedFrames.begin(), extendedFrames.end(), std::back_inserter(lineCounts), [](const json& frame){
+            std::vector<std::vector<int>> detectedLines = frame["detectedLines"].get<std::vector<std::vector<int>>>();
+            return detectedLines.size();
+        });
+        
+        float averageLines = accumulate(lineCounts.begin(), lineCounts.end(), 0.0) / lineCounts.size();
+        std::cout << "Average line count: " << averageLines << std::endl;
+        std::cout << "Max lines: " << *max_element(lineCounts.begin(), lineCounts.end()) << std::endl;
+        
+        milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        std::cout << end_time.count() - start_time.count() << "ms" << std::endl;
+    }
     
     std::ofstream jsonOutput("frame_data_proc.json");
     jsonOutput << (json)extendedFrames << std::endl;
@@ -413,6 +437,7 @@ int main(int argc, char* argv[]) {
     cxxopts::Options options("ballcast-cmd", "Ballcast command line tools.");
     options.add_options()
         ("s,scapt", "Enable screen capture mode")
+        ("d,dump", "When -s specified dumps screen capture to stdout")
         ("e,expiremental", "Enable expiremental line detection")
         ("i,input", "Input filename - enables single transform when specified, when specified together with -o, seves as frame input filename", cxxopts::value<std::string>())
         ("o,output", "Output directory - uses -i or frame_data.json to transform each frame image and store in output dir", cxxopts::value<std::string>())

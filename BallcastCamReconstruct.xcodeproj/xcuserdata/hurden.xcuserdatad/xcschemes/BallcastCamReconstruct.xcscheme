@@ -67,14 +67,14 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-o line_frames"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-i frames/12.3.png"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-l 0.2 -a 4.0 -w 10.0"
+            argument = "-s -l 0.2 -a 2.5 -w 10.0"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
