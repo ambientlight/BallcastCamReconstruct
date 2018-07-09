@@ -70,11 +70,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i frames/12.3.png"
+            argument = "-i test_frames/bc.png"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-s -p -l 0.2 -a 2.5 -w 10.0"
+            argument = "-s -c 20 -p -d -l 0.2 -a 2.5 -w 10.0"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

@@ -14,9 +14,9 @@
 
 ScreenCaptureSourceWrapper::ScreenCaptureSourceWrapper(void): _impl(nullptr){}
 
-void ScreenCaptureSourceWrapper::init(Semaphore* semaphore){
+void ScreenCaptureSourceWrapper::init(int captureFPS, Semaphore* semaphore){
     _impl = new ScreenCaptureSourceImpl();
-    _impl->init(semaphore);
+    _impl->init(captureFPS, semaphore);
 }
 
 ScreenCaptureSourceWrapper::~ScreenCaptureSourceWrapper(){

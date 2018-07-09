@@ -18,7 +18,7 @@ public:
     ScreenCaptureSourceWrapper(void);
     ~ScreenCaptureSourceWrapper(void);
     
-    void init(Semaphore*);
+    void init(int, Semaphore*);
     bool isEnabled() const;
     void* lastFrameBuffer() const;
     void setShouldGetNextFrame(bool shouldGetNextFrame);

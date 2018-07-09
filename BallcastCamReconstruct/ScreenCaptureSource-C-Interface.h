@@ -17,7 +17,7 @@ public:
     ScreenCaptureSourceImpl(void);
     ~ScreenCaptureSourceImpl(void);
     
-    void init(Semaphore*);
+    void init(int, Semaphore*);
     bool isEnabled() const;
     CVImageBufferRef lastFrameBuffer() const;
     

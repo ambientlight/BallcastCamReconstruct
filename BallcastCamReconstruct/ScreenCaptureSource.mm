@@ -35,8 +35,8 @@ ScreenCaptureSourceImpl::~ScreenCaptureSourceImpl(void) {
     [(__bridge id)self dealloc];
 }
 
-void ScreenCaptureSourceImpl::init(Semaphore* semaphore) {
-    self = [[ScreenCaptureSource alloc] initWithSemaphore:semaphore];
+void ScreenCaptureSourceImpl::init(int captureFPS, Semaphore* semaphore) {
+    self = [[ScreenCaptureSource alloc] initWithSemaphore:semaphore fps: captureFPS];
 }
 
 void ScreenCaptureSourceImpl::setShouldGetNextFrame(bool shouldGetNextFrame) {
@@ -53,7 +53,7 @@ CVImageBufferRef ScreenCaptureSourceImpl::lastFrameBuffer() const {
     return self ? [(__bridge id)self lastFrameBuffer] : nullptr;
 }
 
-- (instancetype)initWithSemaphore:(Semaphore*)semaphore {
+- (instancetype)initWithSemaphore:(Semaphore*)semaphore fps:(int)fps {
     self = [super init];
     if(self){
         self.semaphore = semaphore;
@@ -85,7 +85,7 @@ CVImageBufferRef ScreenCaptureSourceImpl::lastFrameBuffer() const {
         
         
         [self.output setAlwaysDiscardsLateVideoFrames:true];
-        [self.input setMinFrameDuration:CMTimeMake(1, 50)];
+        [self.input setMinFrameDuration:CMTimeMake(1, fps)];
         
         self.input.capturesCursor = false;
         self.input.capturesMouseClicks = false;

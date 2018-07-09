@@ -277,9 +277,14 @@ void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
     bool shouldDumpToStdout = parsedResults["d"].count() > 0;
     bool shouldPassthrough = parsedResults["p"].count() > 0;
     
+    int captureFPS = 25;
+    if(parsedResults["c"].count() > 0){
+        captureFPS = parsedResults["c"].as<int>();
+    }
+    
     ScreenCaptureSourceWrapper source = ScreenCaptureSourceWrapper();
     Semaphore* semaphor = new Semaphore(0);
-    source.init(semaphor);
+    source.init(captureFPS, semaphor);
     source.setShouldGetNextFrame(true);
     
     while(source.isEnabled()){
@@ -307,10 +312,8 @@ void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
             }
         }
         
-        //milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-        //std::cout << end_time.count() - start_time.count() << std::endl;
-        
         if(!shouldDumpToStdout){
+            
             //std::cout << smallerImage.rows << " " << smallerImage.cols << " " << smallerImage.channels() << std::endl;
             
             //imshow("Line Mask", lineMask);
@@ -322,9 +325,12 @@ void performTransformFromScreenCapture(cxxopts::ParseResult parsedResults){
             Mat targetImage; cvtColor(smallerImage, targetImage, CV_BGR2RGBA);
             //std::cout << targetImage.rows << " " << targetImage.cols << " " << targetImage.channels() << std::endl;
             
-            fwrite(targetImage.data, sizeof(targetImage.data), targetImage.rows * targetImage.cols * targetImage.channels(), stdout);
+            fwrite(targetImage.data, 1, targetImage.rows * targetImage.cols * targetImage.channels(), stdout);
             fflush(stdout);
         }
+        
+        //milliseconds end_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+        //std::cout << end_time.count() - start_time.count() << std::endl;
         
         source.unlockAndRelease(imageBuffer);
         source.setShouldGetNextFrame(true);
@@ -445,6 +451,7 @@ int main(int argc, char* argv[]) {
     cxxopts::Options options("ballcast-cmd", "Ballcast command line tools.");
     options.add_options()
         ("s,scapt", "Enable screen capture mode")
+        ("c,cfps", "When -s specified, sets the capture frames per second", cxxopts::value<int>())
         ("d,dump", "When -s specified dumps screen capture to stdout")
         ("p,passthrough", "When -s is used just outputs the captured image and doesn't apply any transform to it")
         ("e,expiremental", "Enable expiremental line detection")
